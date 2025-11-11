@@ -9,6 +9,10 @@ import Landing from "./pages/Landing";
 import Competitions from "./pages/Competitions";
 import CompetitionDetail from "./pages/CompetitionDetail";
 import Dashboard from "./pages/Dashboard";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import ManageCompetitions from "./pages/admin/ManageCompetitions";
+import CreateCompetition from "./pages/admin/CreateCompetition";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,13 +24,18 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Navbar />
           <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/competitions" element={<Competitions />} />
-            <Route path="/competition/:id" element={<CompetitionDetail />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="*" element={<NotFound />} />
+            {/* Admin routes without navbar */}
+            <Route path="/admin" element={<AdminLayout><AdminDashboard /></AdminLayout>} />
+            <Route path="/admin/competitions" element={<AdminLayout><ManageCompetitions /></AdminLayout>} />
+            <Route path="/admin/competitions/create" element={<AdminLayout><CreateCompetition /></AdminLayout>} />
+            
+            {/* Public routes with navbar */}
+            <Route path="/" element={<><Navbar /><Landing /></>} />
+            <Route path="/competitions" element={<><Navbar /><Competitions /></>} />
+            <Route path="/competition/:id" element={<><Navbar /><CompetitionDetail /></>} />
+            <Route path="/dashboard" element={<><Navbar /><Dashboard /></>} />
+            <Route path="*" element={<><Navbar /><NotFound /></>} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

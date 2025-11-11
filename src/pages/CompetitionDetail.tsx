@@ -4,12 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Users, Trophy, Upload, ExternalLink } from "lucide-react";
+import { Calendar, Users, Trophy } from "lucide-react";
 import { doc, getDoc, collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Competition, LeaderboardEntry } from "@/types/competition";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SubmissionUpload } from "@/components/SubmissionUpload";
 
 const CompetitionDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -206,51 +207,20 @@ const CompetitionDetail = () => {
         </TabsContent>
 
         <TabsContent value="submit">
-          <Card>
-            <CardHeader>
-              <CardTitle>Submit Your Solution</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {!user ? (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground mb-4">
-                    Please sign in to submit your solution
-                  </p>
-                  <Button asChild>
-                    <Link to="/">Sign In</Link>
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-4">
-                    <div className="p-6 border-2 border-dashed border-border rounded-lg text-center">
-                      <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Upload your submission file (CSV format)
-                      </p>
-                      <Button variant="outline">
-                        Choose File
-                      </Button>
-                    </div>
-
-                    <div className="flex items-center gap-2 p-4 bg-muted/30 rounded-lg">
-                      <ExternalLink className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="font-semibold">Work in Google Colab</p>
-                        <p className="text-sm text-muted-foreground">
-                          Open your notebook in Google Colab and connect results
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button className="w-full bg-gradient-to-r from-primary to-secondary" size="lg">
-                    Submit Solution
-                  </Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
+          {!user ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <p className="text-muted-foreground mb-4">
+                  Please sign in to submit your solution
+                </p>
+                <Button asChild>
+                  <Link to="/">Sign In</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <SubmissionUpload competitionId={id!} onSubmissionComplete={() => {}} />
+          )}
         </TabsContent>
       </Tabs>
     </div>
