@@ -1,0 +1,127 @@
+/**
+ * Import function triggers from their respective submodules:
+ *
+ * import {onCall} from "firebase-functions/v2/https";
+ * import {onDocumentWritten} from "firebase-functions/v2/firestore";
+ *
+ * See a full list of supported triggers at https://firebase.google.com/docs/functions
+ */
+
+import {onDocumentCreated} from "firebase-functions/v2/firestore";
+import * as admin from "firebase-admin";
+import * as logger from "firebase-functions/logger";
+
+admin.initializeApp();
+
+/**
+ * Send email notification when a new submission is created
+ */
+export const onSubmissionCreated = onDocumentCreated(
+  "competitions/{competitionId}/submissions/{submissionId}",
+  async (event) => {
+    const submission = event.data?.data();
+    const competitionId = event.params.competitionId;
+    const submissionId = event.params.submissionId;
+
+    if (!submission) {
+      logger.error("No submission data found");
+      return;
+    }
+
+    try {
+      // Get competition details
+      const competitionDoc = await admin
+        .firestore()
+        .collection("competitions")
+        .doc(competitionId)
+        .get();
+
+      const competition = competitionDoc.data();
+      
+      if (!competition) {
+        logger.error("Competition not found");
+        return;
+      }
+
+      // Get user details
+      const userDoc = await admin
+        .firestore()
+        .collection("users")
+        .doc(submission.userId)
+        .get();
+
+      const user = userDoc.data();
+      const userEmail = user?.email || submission.userEmail;
+
+      if (!userEmail) {
+        logger.warn("No email found for user");
+        return;
+      }
+
+      // TODO: Integrate with email service (e.g., SendGrid, Mailgun, or Resend)
+      // For now, we'll just log the email notification
+      logger.info("Email notification for submission scored:", {
+        to: userEmail,
+        subject: `Your submission for ${competition.title} has been scored!`,
+        body: `
+          Hi ${submission.userName},
+          
+          Your submission for the competition "${competition.title}" has been successfully scored!
+          
+          Score: ${submission.score.toFixed(4)}
+          Submitted at: ${submission.submittedAt.toDate().toLocaleString()}
+          
+          Check your leaderboard position at: https://juvana.lovable.app/competition/${competitionId}
+          
+          Keep competing!
+          The Juvana Team
+        `,
+      });
+
+      // Update submission document to mark email as sent
+      await admin
+        .firestore()
+        .collection("competitions")
+        .doc(competitionId)
+        .collection("submissions")
+        .doc(submissionId)
+        .update({
+          emailSent: true,
+          emailSentAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+    } catch (error) {
+      logger.error("Error sending submission email:", error);
+    }
+  }
+);
+
+/**
+ * Send email notification when competition status changes to "active"
+ */
+export const onCompetitionStatusChange = onDocumentCreated(
+  "competitions/{competitionId}",
+  async (event) => {
+    const competition = event.data?.data();
+    const competitionId = event.params.competitionId;
+
+    if (!competition || competition.status !== "active") {
+      return;
+    }
+
+    try {
+      // Get all users who might be interested
+      // In a real app, you'd have a subscription system
+      logger.info("Competition started notification:", {
+        competitionId,
+        title: competition.title,
+        message: `Competition "${competition.title}" is now active!`,
+      });
+
+      // TODO: Send emails to subscribed users
+      // This would require a users collection with email preferences
+    } catch (error) {
+      logger.error("Error sending competition notification:", error);
+    }
+  }
+);

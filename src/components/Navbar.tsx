@@ -3,7 +3,8 @@ import { Button } from "./ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
-import { Trophy, User, LogOut } from "lucide-react";
+import { User, LogOut, History } from "lucide-react";
+import juvanaLogo from "@/assets/juvana-logo.png";
 
 export const Navbar = () => {
   const { user, signInWithGoogle, signOut } = useAuth();
@@ -12,7 +13,7 @@ export const Navbar = () => {
     <nav className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-2 font-bold text-xl">
-          <Trophy className="h-6 w-6 text-primary" />
+          <img src={juvanaLogo} alt="Juvana" className="h-8 w-8" />
           <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
             Juvana
           </span>
@@ -44,6 +45,12 @@ export const Navbar = () => {
                     <Link to="/dashboard" className="flex items-center gap-2">
                       <User className="h-4 w-4" />
                       Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/submissions" className="flex items-center gap-2">
+                      <History className="h-4 w-4" />
+                      My Submissions
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 text-destructive">
