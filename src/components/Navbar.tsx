@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
-import { User, LogOut, History } from "lucide-react";
+import { User, LogOut, History, Bell } from "lucide-react";
 import juvanaLogo from "@/assets/juvana-logo.png";
 
 export const Navbar = () => {
@@ -51,6 +51,12 @@ export const Navbar = () => {
                     <Link to="/submissions" className="flex items-center gap-2">
                       <History className="h-4 w-4" />
                       My Submissions
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/preferences" className="flex items-center gap-2">
+                      <Bell className="h-4 w-4" />
+                      Notification Preferences
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 text-destructive">

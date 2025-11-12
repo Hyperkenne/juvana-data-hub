@@ -10,6 +10,7 @@ import Competitions from "./pages/Competitions";
 import CompetitionDetail from "./pages/CompetitionDetail";
 import Dashboard from "./pages/Dashboard";
 import SubmissionHistory from "./pages/SubmissionHistory";
+import NotificationPreferences from "./pages/NotificationPreferences";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ManageCompetitions from "./pages/admin/ManageCompetitions";
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/competition/:id" element={<><Navbar /><CompetitionDetail /></>} />
             <Route path="/dashboard" element={<><Navbar /><Dashboard /></>} />
             <Route path="/submissions" element={<><Navbar /><SubmissionHistory /></>} />
+            <Route path="/preferences" element={<><Navbar /><NotificationPreferences /></>} />
             <Route path="*" element={<><Navbar /><NotFound /></>} />
           </Routes>
         </BrowserRouter>
