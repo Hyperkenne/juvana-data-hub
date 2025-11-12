@@ -21,7 +21,7 @@ export const SubmissionUpload = ({ competitionId, onSubmissionComplete }: Submis
   const [uploading, setUploading] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
@@ -38,7 +38,7 @@ export const SubmissionUpload = ({ competitionId, onSubmissionComplete }: Submis
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (): Promise<void> => {
     if (!file || !user || validationErrors.length > 0) return;
 
     setUploading(true);

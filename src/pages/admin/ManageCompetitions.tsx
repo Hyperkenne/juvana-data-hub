@@ -17,7 +17,7 @@ const ManageCompetitions = () => {
     fetchCompetitions();
   }, []);
 
-  const fetchCompetitions = async () => {
+  const fetchCompetitions = async (): Promise<void> => {
     try {
       const q = query(collection(db, "competitions"), orderBy("createdAt", "desc"));
       const snapshot = await getDocs(q);
@@ -34,7 +34,7 @@ const ManageCompetitions = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string): Promise<void> => {
     if (!confirm("Are you sure you want to delete this competition?")) return;
 
     try {
