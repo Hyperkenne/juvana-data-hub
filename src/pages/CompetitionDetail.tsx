@@ -11,6 +11,8 @@ import { Competition, LeaderboardEntry } from "@/types/competition";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SubmissionUpload } from "@/components/SubmissionUpload";
+import { CompetitionDiscussions } from "@/components/CompetitionDiscussions";
+import { CompetitionTeams } from "@/components/CompetitionTeams";
 
 const CompetitionDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -124,7 +126,7 @@ const CompetitionDetail = () => {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="leaderboard">
             <span className="flex items-center gap-2">
@@ -134,6 +136,8 @@ const CompetitionDetail = () => {
               </Badge>
             </span>
           </TabsTrigger>
+          <TabsTrigger value="teams">Teams</TabsTrigger>
+          <TabsTrigger value="discussions">Discussions</TabsTrigger>
           <TabsTrigger value="submit">Submit</TabsTrigger>
         </TabsList>
 
@@ -222,6 +226,14 @@ const CompetitionDetail = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="teams">
+          <CompetitionTeams competitionId={id!} />
+        </TabsContent>
+
+        <TabsContent value="discussions">
+          <CompetitionDiscussions competitionId={id!} />
         </TabsContent>
 
         <TabsContent value="submit">
