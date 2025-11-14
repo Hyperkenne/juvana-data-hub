@@ -126,7 +126,14 @@ const CompetitionDetail = () => {
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
+          <TabsTrigger value="leaderboard">
+            <span className="flex items-center gap-2">
+              Leaderboard
+              <Badge variant="secondary" className="bg-green-500/10 text-green-500 border-green-500/20 text-xs px-2 py-0">
+                LIVE
+              </Badge>
+            </span>
+          </TabsTrigger>
           <TabsTrigger value="submit">Submit</TabsTrigger>
         </TabsList>
 
@@ -157,7 +164,18 @@ const CompetitionDetail = () => {
         <TabsContent value="leaderboard">
           <Card>
             <CardHeader>
-              <CardTitle>Live Leaderboard</CardTitle>
+              <CardTitle className="flex items-center gap-3">
+                Live Leaderboard
+                <Badge variant="secondary" className="bg-green-500/10 text-green-500 border-green-500/20">
+                  <span className="flex items-center gap-1.5">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                    Real-time Updates
+                  </span>
+                </Badge>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">

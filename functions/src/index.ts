@@ -8,10 +8,67 @@
  */
 
 import {onDocumentCreated} from "firebase-functions/v2/firestore";
+import {beforeUserCreated} from "firebase-functions/v2/identity";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 
 admin.initializeApp();
+
+/**
+ * Automatically assign admin role to specific email addresses
+ */
+export const assignAdminRole = beforeUserCreated(async (event) => {
+  const email = event.data.email?.toLowerCase();
+  
+  // List of emails that should automatically get admin access
+  const adminEmails = ["runovastat@gmail.com"];
+  
+  if (email && adminEmails.includes(email)) {
+    logger.info(`Assigning admin role to ${email}`);
+    
+    // Set custom claims for immediate access
+    return {
+      customClaims: {
+        role: "admin"
+      }
+    };
+  }
+  
+  return;
+});
+
+/**
+ * Create user_roles document after user is created
+ */
+export const createUserRole = onDocumentCreated(
+  "users/{userId}",
+  async (event) => {
+    const userId = event.params.userId;
+    const userData = event.data?.data();
+    
+    if (!userData) return;
+    
+    const email = userData.email?.toLowerCase();
+    const adminEmails = ["runovastat@gmail.com"];
+    
+    if (email && adminEmails.includes(email)) {
+      try {
+        await admin
+          .firestore()
+          .collection("user_roles")
+          .doc(userId)
+          .set({
+            roles: ["admin", "organizer"],
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        
+        logger.info(`Created admin role document for ${email}`);
+      } catch (error) {
+        logger.error("Error creating user role:", error);
+      }
+    }
+  }
+);
 
 /**
  * Send email notification when a new submission is created
