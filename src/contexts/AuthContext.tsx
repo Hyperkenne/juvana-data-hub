@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
-import { auth, googleProvider } from "@/lib/firebase";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { auth, googleProvider, db } from "@/lib/firebase";
 import { toast } from "sonner";
 
 interface AuthContextType {
@@ -24,10 +25,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Create or update user document in Firestore
+  const upsertUser = async (u: User) => {
+    try {
+      const userRef = doc(db, "users", u.uid);
+      const userSnap = await getDoc(userRef);
+      
+      const userData = {
+        email: u.email ?? null,
+        displayName: u.displayName ?? null,
+        photoURL: u.photoURL ?? null,
+        lastLoginAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          ...userData,
+          createdAt: serverTimestamp(),
+        }, { merge: true });
+      } else {
+        await setDoc(userRef, userData, { merge: true });
+      }
+    } catch (error) {
+      console.error("Error upserting user document:", error);
+    }
+  };
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       setLoading(false);
+      
+      if (user) {
+        await upsertUser(user);
+      }
     });
 
     return unsubscribe;
