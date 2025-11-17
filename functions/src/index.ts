@@ -8,7 +8,7 @@
  */
 
 import {onDocumentCreated} from "firebase-functions/v2/firestore";
-import {beforeUserCreated} from "firebase-functions/v2/identity";
+import {beforeUserCreated, beforeUserSignedIn} from "firebase-functions/v2/identity";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 
@@ -27,6 +27,26 @@ export const assignAdminRole = beforeUserCreated(async (event) => {
     logger.info(`Assigning admin role to ${email}`);
     
     // Set custom claims for immediate access
+    return {
+      customClaims: {
+        role: "admin"
+      }
+    };
+  }
+  
+  return;
+});
+
+/**
+ * Ensure admin claim is applied on every sign-in for eligible users
+ */
+export const ensureAdminClaim = beforeUserSignedIn(async (event) => {
+  const email = event.data.email?.toLowerCase();
+  const adminEmails = ["runovastat@gmail.com", "kennedybenard73@gmail.com"];
+  
+  if (email && adminEmails.includes(email)) {
+    logger.info(`Ensuring admin claim on sign-in for ${email}`);
+    
     return {
       customClaims: {
         role: "admin"

@@ -9,30 +9,59 @@ export const useAdminRole = (): { isAdmin: boolean; loading: boolean } => {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const checkAdminRole = async () => {
-      if (!user) {
-        setIsAdmin(false);
-        setLoading(false);
-        return;
-      }
+    let cancelled = false;
 
+    const checkAdminRole = async () => {
       try {
+        if (!user) {
+          if (!cancelled) {
+            setIsAdmin(false);
+            setLoading(false);
+          }
+          return;
+        }
+
+        // First, check custom claims (immediate access)
+        const tokenResult = await user.getIdTokenResult(true);
+        const role = tokenResult.claims?.role as string | undefined;
+        
+        if (role === "admin" || role === "organizer") {
+          if (!cancelled) {
+            setIsAdmin(true);
+            setLoading(false);
+          }
+          return;
+        }
+
+        // Fallback to Firestore user_roles collection
         const roleDoc = await getDoc(doc(db, "user_roles", user.uid));
         if (roleDoc.exists()) {
           const roles = roleDoc.data().roles || [];
-          setIsAdmin(roles.includes("admin") || roles.includes("organizer"));
+          if (!cancelled) {
+            setIsAdmin(roles.includes("admin") || roles.includes("organizer"));
+          }
         } else {
-          setIsAdmin(false);
+          if (!cancelled) {
+            setIsAdmin(false);
+          }
         }
       } catch (error) {
         console.error("Error checking admin role:", error);
-        setIsAdmin(false);
+        if (!cancelled) {
+          setIsAdmin(false);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     checkAdminRole();
+    
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   return { isAdmin, loading };
