@@ -21,7 +21,7 @@ export const assignAdminRole = beforeUserCreated(async (event) => {
   const email = event.data.email?.toLowerCase();
   
   // List of emails that should automatically get admin access
-  const adminEmails = ["runovastat@gmail.com"];
+  const adminEmails = ["runovastat@gmail.com", "kennedybenard73@gmail.com"];
   
   if (email && adminEmails.includes(email)) {
     logger.info(`Assigning admin role to ${email}`);
@@ -49,7 +49,7 @@ export const createUserRole = onDocumentCreated(
     if (!userData) return;
     
     const email = userData.email?.toLowerCase();
-    const adminEmails = ["runovastat@gmail.com"];
+    const adminEmails = ["runovastat@gmail.com", "kennedybenard73@gmail.com"];
     
     if (email && adminEmails.includes(email)) {
       try {
