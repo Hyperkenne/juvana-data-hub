@@ -11,10 +11,6 @@ import CompetitionDetail from "./pages/CompetitionDetail";
 import Dashboard from "./pages/Dashboard";
 import SubmissionHistory from "./pages/SubmissionHistory";
 import NotificationPreferences from "./pages/NotificationPreferences";
-import AdminLayout from "./pages/admin/AdminLayout";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import ManageCompetitions from "./pages/admin/ManageCompetitions";
-import CreateCompetition from "./pages/admin/CreateCompetition";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,11 +23,6 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Admin routes without navbar */}
-            <Route path="/admin" element={<AdminLayout><AdminDashboard /></AdminLayout>} />
-            <Route path="/admin/competitions" element={<AdminLayout><ManageCompetitions /></AdminLayout>} />
-            <Route path="/admin/competitions/create" element={<AdminLayout><CreateCompetition /></AdminLayout>} />
-            
             {/* Public routes with navbar */}
             <Route path="/" element={<><Navbar /><Landing /></>} />
             <Route path="/competitions" element={<><Navbar /><Competitions /></>} />
