@@ -12,6 +12,8 @@ export const Navbar = () => {
   return (
     <nav className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container flex h-16 items-center justify-between">
+        
+        {/* Logo */}
         <Link to="/" className="flex items-center gap-2 font-bold text-xl">
           <img src={juvanaLogo} alt="Juvana" className="h-8 w-8" />
           <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
@@ -19,16 +21,24 @@ export const Navbar = () => {
           </span>
         </Link>
 
+        {/* Nav Links */}
         <div className="flex items-center gap-6">
           <Link to="/competitions" className="text-sm font-medium hover:text-primary transition-colors">
             Competitions
           </Link>
-          
+
+          {/* ✅ NEW — DATASETS LINK */}
+          <Link to="/datasets" className="text-sm font-medium hover:text-primary transition-colors">
+            Datasets
+          </Link>
+
           {user ? (
             <>
               <Link to="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">
                 Dashboard
               </Link>
+
+              {/* Profile Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
@@ -40,6 +50,7 @@ export const Navbar = () => {
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
+
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem asChild>
                     <Link to="/dashboard" className="flex items-center gap-2">
@@ -47,23 +58,30 @@ export const Navbar = () => {
                       Dashboard
                     </Link>
                   </DropdownMenuItem>
+
                   <DropdownMenuItem asChild>
                     <Link to="/submissions" className="flex items-center gap-2">
                       <History className="h-4 w-4" />
                       My Submissions
                     </Link>
                   </DropdownMenuItem>
+
                   <DropdownMenuItem asChild>
                     <Link to="/preferences" className="flex items-center gap-2">
                       <Bell className="h-4 w-4" />
                       Notification Preferences
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 text-destructive">
+
+                  <DropdownMenuItem 
+                    onClick={signOut} 
+                    className="flex items-center gap-2 text-destructive"
+                  >
                     <LogOut className="h-4 w-4" />
                     Sign Out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
+
               </DropdownMenu>
             </>
           ) : (

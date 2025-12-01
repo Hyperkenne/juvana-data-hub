@@ -213,7 +213,6 @@ const DiscussionReplies = ({ competitionId, discussionId, user }: DiscussionRepl
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
-        parentReplyId: doc.data().parentReplyId ?? null,
       })) as Reply[];
       setReplies(allReplies);
     });
@@ -252,9 +251,9 @@ const DiscussionReplies = ({ competitionId, discussionId, user }: DiscussionRepl
   // Recursive function to render nested replies
   const renderReplies = (parentId: string | null, level = 0) => {
     return replies
-      .filter((r) => (r.parentReplyId ?? null) === parentId)
+      .filter((r) => r.parentReplyId === parentId)
       .map((reply) => (
-        <div key={reply.id} style={{ marginLeft: level * 16 }} className="mt-2 space-y-2">
+        <div key={reply.id} className={`ml-${level * 8} mt-2 space-y-2`}>
           <Card className="bg-muted/20">
             <CardContent className="flex gap-2 items-start p-2">
               <Avatar className="h-6 w-6">
