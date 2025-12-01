@@ -161,29 +161,38 @@ interface DiscussionCardProps {
 
 const DiscussionCard = ({ competitionId, discussion, user }: DiscussionCardProps) => {
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex gap-4">
-          <Avatar>
-            <AvatarImage src={discussion.userAvatar} />
-            <AvatarFallback>{discussion.userName.charAt(0).toUpperCase()}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1 space-y-2">
-            <div className="flex items-center justify-between">
-              <h4 className="font-semibold">{discussion.userName}</h4>
-              <span className="text-sm text-muted-foreground">
-                {discussion.createdAt?.toLocaleDateString()} at{" "}
-                {discussion.createdAt?.toLocaleTimeString()}
+    <div className="border border-border rounded-lg bg-card hover:border-primary/50 transition-colors">
+      <div className="p-4">
+        <div className="flex gap-3">
+          <div className="flex flex-col items-center gap-2">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={discussion.userAvatar} />
+              <AvatarFallback className="bg-primary/10 text-primary">
+                {discussion.userName.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-semibold text-foreground hover:text-primary cursor-pointer">
+                {discussion.userName}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                • {discussion.createdAt?.toLocaleDateString()}
               </span>
             </div>
-            <p className="text-muted-foreground whitespace-pre-wrap">{discussion.message}</p>
+            
+            <div className="text-foreground leading-relaxed whitespace-pre-wrap break-words">
+              {discussion.message}
+            </div>
           </div>
         </div>
 
         {/* Replies */}
         <DiscussionReplies competitionId={competitionId} discussionId={discussion.id} user={user} />
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 
@@ -249,55 +258,75 @@ const DiscussionReplies = ({ competitionId, discussionId, user }: DiscussionRepl
     }
   };
 
-  // Recursive function to render nested replies
+  // Recursive function to render nested replies (Reddit-style)
   const renderReplies = (parentId: string | null, level = 0) => {
+    const maxLevel = 6; // Limit nesting depth for better UX
+    const actualLevel = Math.min(level, maxLevel);
+    
     return replies
       .filter((r) => (r.parentReplyId ?? null) === parentId)
       .map((reply) => (
-        <div key={reply.id} style={{ marginLeft: level * 16 }} className="mt-2 space-y-2">
-          <Card className="bg-muted/20">
-            <CardContent className="flex gap-2 items-start p-2">
-              <Avatar className="h-6 w-6">
-                <AvatarImage src={reply.userAvatar} />
-                <AvatarFallback>{reply.userName?.charAt(0).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <p className="text-sm font-semibold">{reply.userName}</p>
-                <p className="text-sm text-muted-foreground">{reply.message}</p>
-
-                {/* Reply to reply form */}
-                {user && (
-                  <ReplyForm
-                    competitionId={competitionId}
-                    discussionId={discussionId}
-                    parentReplyId={reply.id}
-                  />
-                )}
-
-                {/* Render child replies recursively */}
-                {renderReplies(reply.id, level + 1)}
+        <div 
+          key={reply.id} 
+          style={{ marginLeft: actualLevel * 24 }} 
+          className="mt-2 border-l-2 border-border/50 pl-3"
+        >
+          <div className="flex gap-2 items-start">
+            <Avatar className="h-7 w-7 mt-1">
+              <AvatarImage src={reply.userAvatar} />
+              <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                {reply.userName?.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm font-semibold hover:text-primary cursor-pointer">
+                  {reply.userName}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {reply.createdAt?.toLocaleTimeString()}
+                </span>
               </div>
-            </CardContent>
-          </Card>
+              <p className="text-sm leading-relaxed break-words mb-2">{reply.message}</p>
+
+              {/* Reply to reply form */}
+              {user && level < maxLevel && (
+                <ReplyForm
+                  competitionId={competitionId}
+                  discussionId={discussionId}
+                  parentReplyId={reply.id}
+                />
+              )}
+
+              {/* Render child replies recursively */}
+              {renderReplies(reply.id, level + 1)}
+            </div>
+          </div>
         </div>
       ));
   };
 
   return (
-    <div className="ml-16 mt-2 space-y-2">
+    <div className="ml-12 mt-4 space-y-2">
       {renderReplies(null)}
 
       {/* Top-level reply form */}
       {user && (
-        <form onSubmit={handleReplySubmit} className="flex gap-2 mt-2">
+        <form onSubmit={handleReplySubmit} className="flex gap-2 mt-3 items-start">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={user.photoURL || ""} />
+            <AvatarFallback className="bg-primary/10 text-primary">
+              {user.displayName?.charAt(0).toUpperCase() || "?"}
+            </AvatarFallback>
+          </Avatar>
           <Textarea
             value={newReply}
             onChange={(e) => setNewReply(e.target.value)}
             placeholder="Write a reply..."
-            className="flex-1 min-h-[50px]"
+            className="flex-1 min-h-[60px]"
           />
-          <Button type="submit" disabled={isSubmitting || !newReply.trim()}>
-            <Send className="h-4 w-4" /> Reply
+          <Button type="submit" disabled={isSubmitting || !newReply.trim()} size="sm">
+            <Send className="h-4 w-4 mr-1" /> Reply
           </Button>
         </form>
       )}
@@ -318,6 +347,7 @@ const ReplyForm = ({ competitionId, discussionId, parentReplyId }: ReplyFormProp
   const { user } = useAuth();
   const [childReply, setChildReply] = useState("");
   const [isSubmittingChild, setIsSubmittingChild] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
   const handleChildSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -337,6 +367,7 @@ const ReplyForm = ({ competitionId, discussionId, parentReplyId }: ReplyFormProp
         }
       );
       setChildReply("");
+      setShowForm(false);
       toast.success("Reply posted!");
     } catch (error) {
       console.error(error);
@@ -346,17 +377,36 @@ const ReplyForm = ({ competitionId, discussionId, parentReplyId }: ReplyFormProp
     }
   };
 
+  if (!showForm) {
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setShowForm(true)}
+        className="h-7 text-xs text-muted-foreground hover:text-foreground"
+      >
+        Reply
+      </Button>
+    );
+  }
+
   return (
-    <form onSubmit={handleChildSubmit} className="flex gap-2 mt-1">
+    <form onSubmit={handleChildSubmit} className="flex gap-2 mt-2">
       <Textarea
         value={childReply}
         onChange={(e) => setChildReply(e.target.value)}
-        placeholder="Reply..."
-        className="flex-1 min-h-[40px]"
+        placeholder="Write a reply..."
+        className="flex-1 min-h-[60px] text-sm"
+        autoFocus
       />
-      <Button type="submit" disabled={isSubmittingChild || !childReply.trim()}>
-        <Send className="h-4 w-4" />
-      </Button>
+      <div className="flex flex-col gap-1">
+        <Button type="submit" disabled={isSubmittingChild || !childReply.trim()} size="sm">
+          <Send className="h-3 w-3" />
+        </Button>
+        <Button type="button" variant="ghost" size="sm" onClick={() => setShowForm(false)}>
+          Cancel
+        </Button>
+      </div>
     </form>
   );
 };

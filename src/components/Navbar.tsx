@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { User, LogOut, History, Bell } from "lucide-react";
 import juvanaLogo from "@/assets/juvana-logo.png";
+import { NavLink } from "./NavLink";
 
 export const Navbar = () => {
   const { user, signInWithGoogle, signOut } = useAuth();
@@ -23,14 +24,17 @@ export const Navbar = () => {
 
         {/* Nav Links */}
         <div className="flex items-center gap-6">
-          <Link to="/competitions" className="text-sm font-medium hover:text-primary transition-colors">
+          <NavLink to="/competitions" className="text-sm font-medium hover:text-primary transition-colors">
             Competitions
-          </Link>
+          </NavLink>
 
-          {/* ✅ NEW — DATASETS LINK */}
-          <Link to="/datasets" className="text-sm font-medium hover:text-primary transition-colors">
+          <NavLink to="/datasets" className="text-sm font-medium hover:text-primary transition-colors">
             Datasets
-          </Link>
+          </NavLink>
+
+          <NavLink to="/playgrounds" className="text-sm font-medium hover:text-primary transition-colors">
+            Playgrounds
+          </NavLink>
 
           {user ? (
             <>

@@ -12,7 +12,8 @@ import DatasetStats from "@/components/datasets/DatasetStats";
 import DatasetFileExplorer from "@/components/datasets/DatasetFileExplorer";
 import DatasetVersionHistory from "@/components/datasets/DatasetVersionHistory";
 import DatasetDiscussion from "@/components/datasets/DatasetDiscussion";
-import { Download, Trash2, BookOpen, Loader2 } from "lucide-react";
+import { NotebookLink } from "@/components/notebooks/NotebookLink";
+import { Download, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 
@@ -109,7 +110,9 @@ const DatasetDetail = () => {
             </div>
 
             <div className="flex gap-2 shrink-0">
-              <Button variant="default" className="gap-2">
+              <NotebookLink datasetId={id!} datasetName={dataset?.name || "Dataset"} />
+              
+              <Button variant="outline" className="gap-2">
                 <Download className="h-4 w-4" />
                 Download
               </Button>

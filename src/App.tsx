@@ -18,6 +18,10 @@ import NotFound from "./pages/NotFound";
 import Datasets from "./pages/Datasets";
 import DatasetDetail from "./pages/DatasetDetail";
 
+// ✅ Import playground pages
+import Playgrounds from "./pages/Playgrounds";
+import PlaygroundDetail from "./pages/PlaygroundDetail";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -37,6 +41,10 @@ const App = () => (
             {/* ✅ NEW DATASET ROUTES */}
             <Route path="/datasets" element={<><Navbar /><Datasets /></>} />
             <Route path="/datasets/:id" element={<><Navbar /><DatasetDetail /></>} />
+
+            {/* ✅ NEW PLAYGROUND ROUTES */}
+            <Route path="/playgrounds" element={<><Navbar /><Playgrounds /></>} />
+            <Route path="/playground/:id" element={<><Navbar /><PlaygroundDetail /></>} />
 
             <Route path="/dashboard" element={<><Navbar /><Dashboard /></>} />
             <Route path="/submissions" element={<><Navbar /><SubmissionHistory /></>} />
