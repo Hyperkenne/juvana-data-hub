@@ -1,18 +1,21 @@
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
+import { db, storage } from "@/lib/firebase";
+import { collection, getDocs, query, orderBy, limit, doc, updateDoc, increment } from "firebase/firestore";
+import { ref, getDownloadURL } from "firebase/storage";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Download, Eye } from "lucide-react";
+import { FileText, Download, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface DatasetFileExplorerProps {
   datasetId: string;
+  onFilesLoaded?: (files: any[]) => void;
 }
 
-const DatasetFileExplorer = ({ datasetId }: DatasetFileExplorerProps) => {
+const DatasetFileExplorer = ({ datasetId, onFilesLoaded }: DatasetFileExplorerProps) => {
   const [files, setFiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -29,7 +32,9 @@ const DatasetFileExplorer = ({ datasetId }: DatasetFileExplorerProps) => {
       const snap = await getDocs(q);
       if (!snap.empty) {
         const latestVersion = snap.docs[0].data();
-        setFiles(latestVersion.files || []);
+        const loadedFiles = latestVersion.files || [];
+        setFiles(loadedFiles);
+        onFilesLoaded?.(loadedFiles);
       }
     } catch (error) {
       console.error("Error loading files:", error);
@@ -45,9 +50,39 @@ const DatasetFileExplorer = ({ datasetId }: DatasetFileExplorerProps) => {
     return `${mb.toFixed(1)} MB`;
   };
 
-  const handleDownload = (file: any) => {
-    window.open(file.url, "_blank");
-    toast({ title: "Download started", description: `Downloading ${file.name}` });
+  const handleDownload = async (file: any) => {
+    setDownloading(file.name);
+    try {
+      // Fetch the file as blob to force download
+      const response = await fetch(file.url);
+      if (!response.ok) throw new Error("Download failed");
+      
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      
+      // Create a download link
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      // Increment download count
+      await updateDoc(doc(db, "datasets", datasetId), {
+        downloadCount: increment(1)
+      });
+
+      toast({ title: "Download started", description: `Downloading ${file.name}` });
+    } catch (error) {
+      console.error("Download error:", error);
+      // Fallback: open in new tab
+      window.open(file.url, "_blank");
+      toast({ title: "Download", description: "Opening file in new tab" });
+    } finally {
+      setDownloading(null);
+    }
   };
 
   if (loading) {
@@ -61,7 +96,7 @@ const DatasetFileExplorer = ({ datasetId }: DatasetFileExplorerProps) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Files</CardTitle>
+        <CardTitle>Files ({files.length})</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
@@ -78,8 +113,17 @@ const DatasetFileExplorer = ({ datasetId }: DatasetFileExplorerProps) => {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => handleDownload(file)}>
-                  <Download className="h-4 w-4" />
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => handleDownload(file)}
+                  disabled={downloading === file.name}
+                >
+                  {downloading === file.name ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </div>
