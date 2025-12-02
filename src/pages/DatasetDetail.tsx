@@ -12,8 +12,9 @@ import DatasetStats from "@/components/datasets/DatasetStats";
 import DatasetFileExplorer from "@/components/datasets/DatasetFileExplorer";
 import DatasetVersionHistory from "@/components/datasets/DatasetVersionHistory";
 import DatasetDiscussion from "@/components/datasets/DatasetDiscussion";
-import { NotebookLink } from "@/components/notebooks/NotebookLink";
-import { Download, Trash2, Loader2 } from "lucide-react";
+import DatasetNotebook from "@/components/datasets/DatasetNotebook";
+import DatasetOverview from "@/components/datasets/DatasetOverview";
+import { Download, Trash2, Loader2, Eye, Database, Code, MessageSquare, History } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 
@@ -72,7 +73,7 @@ const DatasetDetail = () => {
 
   if (loading) {
     return (
-      <div className="container py-12 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -84,35 +85,59 @@ const DatasetDetail = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
-      <div className="container py-12 space-y-8">
-        {/* Header */}
-        <div className="space-y-4">
+      {/* Header Section - Kaggle Style */}
+      <div className="border-b bg-card/50">
+        <div className="container py-6 space-y-4">
           <div className="flex items-start justify-between gap-4">
-            <div className="space-y-2 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-4xl font-bold">{dataset.name}</h1>
+            <div className="space-y-3 flex-1">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-3xl font-bold">{dataset.name}</h1>
                 {dataset.category && (
-                  <Badge variant="secondary" className="text-sm">
-                    {dataset.category}
-                  </Badge>
+                  <Badge variant="secondary">{dataset.category}</Badge>
                 )}
               </div>
               
-              <div className="flex items-center gap-3 text-muted-foreground">
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src={dataset.userAvatar} />
-                  <AvatarFallback>{dataset.userName?.[0] || "U"}</AvatarFallback>
-                </Avatar>
-                <span>{dataset.userName || "Anonymous"}</span>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={dataset.userAvatar} />
+                    <AvatarFallback className="text-xs">{dataset.userName?.[0] || "U"}</AvatarFallback>
+                  </Avatar>
+                  <span className="font-medium">{dataset.userName || "Anonymous"}</span>
+                </div>
                 <span>•</span>
                 <span>Updated {formatDate(dataset.updatedAt || dataset.createdAt)}</span>
+                <span>•</span>
+                <span>{dataset.downloadCount || 0} downloads</span>
               </div>
+
+              {/* Short description - max 2 lines */}
+              {dataset.description && (
+                <p className="text-muted-foreground line-clamp-2 max-w-3xl">
+                  {dataset.description}
+                </p>
+              )}
+
+              {/* Tags */}
+              {dataset.tags && dataset.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {dataset.tags.slice(0, 5).map((tag: string, idx: number) => (
+                    <Badge key={idx} variant="outline" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                  {dataset.tags.length > 5 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{dataset.tags.length - 5} more
+                    </Badge>
+                  )}
+                </div>
+              )}
             </div>
 
+            {/* Actions */}
             <div className="flex gap-2 shrink-0">
-              <NotebookLink datasetId={id!} datasetName={dataset?.name || "Dataset"} />
-              
-              <Button variant="outline" className="gap-2">
+              <Button className="gap-2">
                 <Download className="h-4 w-4" />
                 Download
               </Button>
@@ -120,7 +145,7 @@ const DatasetDetail = () => {
               {isOwner && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="icon" disabled={deleting}>
+                    <Button variant="outline" size="icon" disabled={deleting}>
                       {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                     </Button>
                   </AlertDialogTrigger>
@@ -142,57 +167,67 @@ const DatasetDetail = () => {
               )}
             </div>
           </div>
-
-          {dataset.description && (
-            <p className="text-lg text-muted-foreground">{dataset.description}</p>
-          )}
-
-          {dataset.tags && dataset.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {dataset.tags.map((tag: string, idx: number) => (
-                <Badge key={idx} variant="outline">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          )}
         </div>
+      </div>
 
-        {/* Stats */}
-        <DatasetStats dataset={dataset} />
+      {/* Stats Bar */}
+      <div className="border-b bg-muted/30">
+        <div className="container py-4">
+          <DatasetStats dataset={dataset} />
+        </div>
+      </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="data">Data</TabsTrigger>
-            <TabsTrigger value="versions">Versions</TabsTrigger>
-            <TabsTrigger value="discussion">Discussion</TabsTrigger>
+      {/* Main Content - Kaggle Style Tabs */}
+      <div className="container py-6">
+        <Tabs defaultValue="data" className="space-y-6">
+          <TabsList className="bg-muted/50 p-1">
+            <TabsTrigger value="data" className="gap-2">
+              <Database className="h-4 w-4" />
+              Data
+            </TabsTrigger>
+            <TabsTrigger value="code" className="gap-2">
+              <Code className="h-4 w-4" />
+              Code
+            </TabsTrigger>
+            <TabsTrigger value="discussion" className="gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Discussion
+            </TabsTrigger>
+            <TabsTrigger value="activity" className="gap-2">
+              <History className="h-4 w-4" />
+              Activity
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
-            <DatasetFileExplorer datasetId={id!} />
-            
-            <div className="border rounded-lg p-6 space-y-4">
-              <h2 className="text-xl font-semibold">About this Dataset</h2>
-              <div className="space-y-2 text-muted-foreground">
-                <p><strong>License:</strong> {dataset.license || "Not specified"}</p>
-                <p><strong>Created:</strong> {formatDate(dataset.createdAt)}</p>
-                {dataset.description && <p className="mt-4">{dataset.description}</p>}
+          {/* Data Tab */}
+          <TabsContent value="data" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <DatasetFileExplorer datasetId={id!} />
+              </div>
+              <div>
+                <DatasetOverview dataset={dataset} />
               </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="data">
-            <DatasetFileExplorer datasetId={id!} />
+          {/* Code Tab - Kaggle Style Notebook */}
+          <TabsContent value="code" className="space-y-6">
+            <DatasetNotebook 
+              datasetId={id!} 
+              datasetName={dataset.name}
+              description={dataset.description}
+            />
           </TabsContent>
 
-          <TabsContent value="versions">
-            <DatasetVersionHistory datasetId={id!} />
-          </TabsContent>
-
+          {/* Discussion Tab */}
           <TabsContent value="discussion">
             <DatasetDiscussion datasetId={id!} />
+          </TabsContent>
+
+          {/* Activity/Versions Tab */}
+          <TabsContent value="activity">
+            <DatasetVersionHistory datasetId={id!} />
           </TabsContent>
         </Tabs>
       </div>

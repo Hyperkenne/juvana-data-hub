@@ -10,6 +10,16 @@ export interface Competition {
   status: "active" | "upcoming" | "completed";
   organizerName: string;
   organizerLogo?: string;
+  // Submission requirements
+  submissionFormat?: {
+    requiredColumns: string[];
+    predictionType: "numeric" | "classification" | "text";
+    maxSubmissionsPerDay?: number;
+    maxFileSize?: number;
+  };
+  evaluationMetric?: "accuracy" | "rmse" | "mae" | "f1" | "auc";
+  groundTruthPath?: string;
+  datasetId?: string;
 }
 
 export interface Submission {
@@ -21,6 +31,11 @@ export interface Submission {
   score: number;
   submittedAt: Date;
   notebookUrl?: string;
+  fileName?: string;
+  fileUrl?: string;
+  rowCount?: number;
+  status: "pending" | "scored" | "error";
+  errorMessage?: string;
 }
 
 export interface LeaderboardEntry {
@@ -32,4 +47,5 @@ export interface LeaderboardEntry {
   score: number;
   submissions: number;
   lastSubmission: Date;
+  bestScore?: number;
 }

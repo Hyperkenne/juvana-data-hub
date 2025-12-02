@@ -1,6 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Download, Database, Calendar, User, FileText, Award } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Download, Database, FileText, Eye, HardDrive } from "lucide-react";
 
 interface DatasetStatsProps {
   dataset: any;
@@ -8,40 +6,29 @@ interface DatasetStatsProps {
 
 const DatasetStats = ({ dataset }: DatasetStatsProps) => {
   const formatSize = (bytes: number) => {
-    if (!bytes) return "Unknown";
+    if (!bytes) return "—";
     const mb = bytes / (1024 * 1024);
-    if (mb < 1) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (mb < 1) return `${(bytes / 1024).toFixed(0)} KB`;
     if (mb < 1024) return `${mb.toFixed(1)} MB`;
-    return `${(mb / 1024).toFixed(1)} GB`;
-  };
-
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return "Unknown";
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return formatDistanceToNow(date, { addSuffix: true });
+    return `${(mb / 1024).toFixed(2)} GB`;
   };
 
   const stats = [
     { icon: Download, label: "Downloads", value: dataset.downloadCount || 0 },
-    { icon: Database, label: "Version", value: `v${dataset.latestVersion || 1}` },
-    { icon: Calendar, label: "Updated", value: formatDate(dataset.updatedAt || dataset.createdAt) },
-    { icon: FileText, label: "Files", value: dataset.fileCount || "N/A" },
-    { icon: Award, label: "License", value: dataset.license || "Not specified" },
-    { icon: User, label: "Owner", value: dataset.userName || "Anonymous" },
+    { icon: Eye, label: "Views", value: dataset.viewCount || 0 },
+    { icon: FileText, label: "Files", value: dataset.fileCount || 1 },
+    { icon: HardDrive, label: "Size", value: formatSize(dataset.totalSize) },
+    { icon: Database, label: "Version", value: dataset.latestVersion || 1 },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div className="flex flex-wrap gap-6">
       {stats.map((stat, idx) => (
-        <Card key={idx}>
-          <CardContent className="p-4 space-y-2">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <stat.icon className="h-4 w-4" />
-              <span className="text-xs font-medium">{stat.label}</span>
-            </div>
-            <p className="text-lg font-semibold truncate">{stat.value}</p>
-          </CardContent>
-        </Card>
+        <div key={idx} className="flex items-center gap-2 text-sm">
+          <stat.icon className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground">{stat.label}:</span>
+          <span className="font-medium">{stat.value}</span>
+        </div>
       ))}
     </div>
   );
