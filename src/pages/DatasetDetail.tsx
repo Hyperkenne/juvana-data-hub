@@ -14,7 +14,9 @@ import DatasetVersionHistory from "@/components/datasets/DatasetVersionHistory";
 import DatasetDiscussion from "@/components/datasets/DatasetDiscussion";
 import DatasetNotebook from "@/components/datasets/DatasetNotebook";
 import DatasetOverview from "@/components/datasets/DatasetOverview";
-import { Download, Trash2, Loader2, Eye, Database, Code, MessageSquare, History } from "lucide-react";
+import DatasetVersionUpdate from "@/components/datasets/DatasetVersionUpdate";
+import DatasetDataExplorer from "@/components/datasets/DatasetDataExplorer";
+import { Download, Trash2, Loader2, Database, Code, MessageSquare, History, Table } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 
@@ -82,6 +84,7 @@ const DatasetDetail = () => {
   if (!dataset) return null;
 
   const isOwner = user && user.uid === dataset.userId;
+  const [datasetFiles, setDatasetFiles] = useState<any[]>([]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
@@ -95,6 +98,7 @@ const DatasetDetail = () => {
                 {dataset.category && (
                   <Badge variant="secondary">{dataset.category}</Badge>
                 )}
+                <Badge variant="outline">v{dataset.latestVersion || 1}</Badge>
               </div>
               
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -137,10 +141,13 @@ const DatasetDetail = () => {
 
             {/* Actions */}
             <div className="flex gap-2 shrink-0">
-              <Button className="gap-2">
-                <Download className="h-4 w-4" />
-                Download
-              </Button>
+              {isOwner && (
+                <DatasetVersionUpdate
+                  datasetId={id!}
+                  currentVersion={dataset.latestVersion || 1}
+                  onUpdate={load}
+                />
+              )}
               
               {isOwner && (
                 <AlertDialog>
@@ -185,6 +192,10 @@ const DatasetDetail = () => {
               <Database className="h-4 w-4" />
               Data
             </TabsTrigger>
+            <TabsTrigger value="explorer" className="gap-2">
+              <Table className="h-4 w-4" />
+              Data Explorer
+            </TabsTrigger>
             <TabsTrigger value="code" className="gap-2">
               <Code className="h-4 w-4" />
               Code
@@ -203,12 +214,17 @@ const DatasetDetail = () => {
           <TabsContent value="data" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2">
-                <DatasetFileExplorer datasetId={id!} />
+                <DatasetFileExplorer datasetId={id!} onFilesLoaded={setDatasetFiles} />
               </div>
               <div>
                 <DatasetOverview dataset={dataset} />
               </div>
             </div>
+          </TabsContent>
+
+          {/* Data Explorer Tab - Kaggle Style */}
+          <TabsContent value="explorer" className="space-y-6">
+            <DatasetDataExplorer files={datasetFiles} />
           </TabsContent>
 
           {/* Code Tab - Kaggle Style Notebook */}
