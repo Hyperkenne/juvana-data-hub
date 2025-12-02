@@ -3,14 +3,31 @@ export interface ValidationResult {
   errors: string[];
   rowCount: number;
   headers: string[];
+  data?: any[];
 }
 
-export const validateCSV = async (file: File): Promise<ValidationResult> => {
+export interface SubmissionRequirements {
+  requiredColumns: string[];
+  predictionType: "numeric" | "classification" | "text";
+  maxFileSize?: number; // in MB
+}
+
+const DEFAULT_REQUIREMENTS: SubmissionRequirements = {
+  requiredColumns: ["id", "prediction"],
+  predictionType: "numeric",
+  maxFileSize: 10,
+};
+
+export const validateCSV = async (
+  file: File,
+  requirements: SubmissionRequirements = DEFAULT_REQUIREMENTS
+): Promise<ValidationResult> => {
   const result: ValidationResult = {
     valid: true,
     errors: [],
     rowCount: 0,
     headers: [],
+    data: [],
   };
 
   // Check file type
@@ -20,11 +37,11 @@ export const validateCSV = async (file: File): Promise<ValidationResult> => {
     return result;
   }
 
-  // Check file size (max 10MB)
-  const maxSize = 10 * 1024 * 1024;
+  // Check file size
+  const maxSize = (requirements.maxFileSize || 10) * 1024 * 1024;
   if (file.size > maxSize) {
     result.valid = false;
-    result.errors.push('File size must be less than 10MB');
+    result.errors.push(`File size must be less than ${requirements.maxFileSize || 10}MB`);
     return result;
   }
 
@@ -39,31 +56,65 @@ export const validateCSV = async (file: File): Promise<ValidationResult> => {
     }
 
     // Parse headers
-    const headers = lines[0].split(',').map(h => h.trim());
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
     result.headers = headers;
 
-    // Check for required columns (id and prediction)
-    if (!headers.includes('id') || !headers.includes('prediction')) {
+    // Check for required columns
+    const missingColumns = requirements.requiredColumns.filter(
+      col => !headers.includes(col.toLowerCase())
+    );
+    
+    if (missingColumns.length > 0) {
       result.valid = false;
-      result.errors.push('CSV must contain "id" and "prediction" columns');
+      result.errors.push(`Missing required columns: ${missingColumns.join(', ')}`);
       return result;
     }
 
     result.rowCount = lines.length - 1;
+    const data: any[] = [];
 
     // Validate data rows
+    const predictionIndex = headers.indexOf('prediction');
+    
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',');
+      const values = lines[i].split(',').map(v => v.trim());
+      
       if (values.length !== headers.length) {
-        result.errors.push(`Row ${i}: Column count mismatch`);
+        result.errors.push(`Row ${i}: Column count mismatch (expected ${headers.length}, got ${values.length})`);
+        continue;
       }
       
-      // Check if prediction is a valid number
-      const predictionIndex = headers.indexOf('prediction');
-      const prediction = parseFloat(values[predictionIndex]);
-      if (isNaN(prediction)) {
-        result.errors.push(`Row ${i}: Invalid prediction value`);
+      const row: any = {};
+      headers.forEach((header, idx) => {
+        row[header] = values[idx];
+      });
+
+      // Validate prediction based on type
+      if (predictionIndex !== -1) {
+        const predValue = values[predictionIndex];
+        
+        if (requirements.predictionType === "numeric") {
+          const prediction = parseFloat(predValue);
+          if (isNaN(prediction)) {
+            result.errors.push(`Row ${i}: Prediction must be a number, got "${predValue}"`);
+          }
+        } else if (requirements.predictionType === "classification") {
+          if (!predValue || predValue.trim() === "") {
+            result.errors.push(`Row ${i}: Prediction cannot be empty`);
+          }
+        }
       }
+
+      data.push(row);
+    }
+
+    result.data = data;
+
+    // Limit errors shown
+    if (result.errors.length > 5) {
+      const totalErrors = result.errors.length;
+      result.errors = result.errors.slice(0, 5);
+      result.errors.push(`... and ${totalErrors - 5} more errors`);
     }
 
     if (result.errors.length > 0) {
@@ -78,19 +129,73 @@ export const validateCSV = async (file: File): Promise<ValidationResult> => {
   return result;
 };
 
-export const calculateScore = (submissionData: any[], groundTruth: any[]): number => {
-  // Simple accuracy calculation
-  // In production, this would be more sophisticated based on competition metric
-  let correct = 0;
+export const calculateScore = (
+  submissionData: any[],
+  groundTruth: any[],
+  metric: "accuracy" | "rmse" | "mae" | "f1" | "auc" = "accuracy"
+): number => {
+  if (!submissionData.length || !groundTruth.length) return 0;
+
+  // Create lookup map for ground truth
+  const truthMap = new Map(groundTruth.map(t => [String(t.id), t]));
   
-  for (let i = 0; i < submissionData.length; i++) {
-    const submitted = submissionData[i];
-    const truth = groundTruth.find(t => t.id === submitted.id);
+  let matched = 0;
+  let totalSquaredError = 0;
+  let totalAbsError = 0;
+  let correctPredictions = 0;
+
+  for (const submission of submissionData) {
+    const truth = truthMap.get(String(submission.id));
+    if (!truth) continue;
     
-    if (truth && Math.abs(submitted.prediction - truth.value) < 0.001) {
-      correct++;
+    matched++;
+    const predicted = parseFloat(submission.prediction);
+    const actual = parseFloat(truth.target || truth.value || truth.prediction);
+    
+    if (isNaN(predicted) || isNaN(actual)) continue;
+
+    const error = predicted - actual;
+    totalSquaredError += error * error;
+    totalAbsError += Math.abs(error);
+    
+    // For classification (rounded to nearest integer)
+    if (Math.round(predicted) === Math.round(actual)) {
+      correctPredictions++;
     }
   }
-  
-  return correct / submissionData.length;
+
+  if (matched === 0) return 0;
+
+  switch (metric) {
+    case "accuracy":
+      return correctPredictions / matched;
+    case "rmse":
+      // Return inverse so higher is better for leaderboard
+      const rmse = Math.sqrt(totalSquaredError / matched);
+      return 1 / (1 + rmse);
+    case "mae":
+      const mae = totalAbsError / matched;
+      return 1 / (1 + mae);
+    default:
+      return correctPredictions / matched;
+  }
+};
+
+export const parseGroundTruth = async (text: string): Promise<any[]> => {
+  const lines = text.split('\n').filter(line => line.trim());
+  if (lines.length < 2) return [];
+
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const data: any[] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.trim());
+    const row: any = {};
+    headers.forEach((header, idx) => {
+      row[header] = values[idx];
+    });
+    data.push(row);
+  }
+
+  return data;
 };

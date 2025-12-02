@@ -249,7 +249,11 @@ const CompetitionDetail = () => {
               </CardContent>
             </Card>
           ) : (
-            <SubmissionUpload competitionId={id!} onSubmissionComplete={() => {}} />
+            <SubmissionUpload 
+              competitionId={id!} 
+              competition={competition}
+              onSubmissionComplete={() => {}} 
+            />
           )}
         </TabsContent>
       </Tabs>
