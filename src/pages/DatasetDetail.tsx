@@ -26,8 +26,8 @@ import DatasetNotebook from "@/components/datasets/DatasetNotebook";
 import DatasetOverview from "@/components/datasets/DatasetOverview";
 import DatasetVersionUpdate from "@/components/datasets/DatasetVersionUpdate";
 import DatasetDataExplorer from "@/components/datasets/DatasetDataExplorer";
+import DatasetAbout from "@/components/datasets/DatasetAbout";
 import {
-  Download,
   Trash2,
   Loader2,
   Database,
@@ -35,6 +35,7 @@ import {
   MessageSquare,
   History,
   Table,
+  Info,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
@@ -55,6 +56,14 @@ const DatasetDetail = () => {
 
   useEffect(() => {
     load();
+    // Track view count
+    if (id) {
+      import("firebase/firestore").then(({ updateDoc, increment }) => {
+        updateDoc(doc(db, "datasets", id), {
+          viewCount: increment(1)
+        }).catch(console.error);
+      });
+    }
   }, [id]);
 
   const load = async () => {
@@ -242,6 +251,10 @@ const DatasetDetail = () => {
               <Database className="h-4 w-4" />
               Data
             </TabsTrigger>
+            <TabsTrigger value="about" className="gap-2">
+              <Info className="h-4 w-4" />
+              About
+            </TabsTrigger>
             <TabsTrigger value="explorer" className="gap-2">
               <Table className="h-4 w-4" />
               Data Explorer
@@ -273,6 +286,11 @@ const DatasetDetail = () => {
                 <DatasetOverview dataset={dataset} />
               </div>
             </div>
+          </TabsContent>
+
+          {/* About Tab - Detailed info */}
+          <TabsContent value="about" className="space-y-6">
+            <DatasetAbout dataset={dataset} />
           </TabsContent>
 
           {/* Explorer */}
