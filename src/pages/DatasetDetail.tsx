@@ -46,17 +46,13 @@ const DatasetDetail = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // -------------------------
-  // ✅ ALL HOOKS AT THE TOP
-  // -------------------------
   const [dataset, setDataset] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
-  const [datasetFiles, setDatasetFiles] = useState<any[]>([]); // <-- FIXED HOOK ORDER
+  const [datasetFiles, setDatasetFiles] = useState<any[]>([]);
 
   useEffect(() => {
     load();
-    // Track view count
     if (id) {
       import("firebase/firestore").then(({ updateDoc, increment }) => {
         updateDoc(doc(db, "datasets", id), {
@@ -118,9 +114,6 @@ const DatasetDetail = () => {
     return formatDistanceToNow(date, { addSuffix: true });
   };
 
-  // -------------------------
-  // Loading State
-  // -------------------------
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center">
@@ -156,21 +149,18 @@ const DatasetDetail = () => {
                       {dataset.userName?.[0] || "U"}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="font-medium">
-                    {dataset.userName || "Anonymous"}
-                  </span>
+                  <span className="font-medium">{dataset.userName || "Anonymous"}</span>
                 </div>
                 <span>•</span>
-                <span>
-                  Updated {formatDate(dataset.updatedAt || dataset.createdAt)}
-                </span>
+                <span>Updated {formatDate(dataset.updatedAt || dataset.createdAt)}</span>
                 <span>•</span>
                 <span>{dataset.downloadCount || 0} downloads</span>
               </div>
 
-              {dataset.description && (
-                <p className="text-muted-foreground line-clamp-2 max-w-3xl">
-                  {dataset.description}
+              {/* ✅ Subtitle below dataset name */}
+              {dataset.subtitle && (
+                <p className="text-muted-foreground line-clamp-2 max-w-3xl mt-1">
+                  {dataset.subtitle}
                 </p>
               )}
 
@@ -283,7 +273,13 @@ const DatasetDetail = () => {
                 />
               </div>
               <div>
-                <DatasetOverview dataset={dataset} />
+                {/* ✅ Pass subtitle to DatasetOverview */}
+                <DatasetOverview
+                  dataset={{
+                    ...dataset,
+                    description: dataset.subtitle, // show subtitle instead of full description
+                  }}
+                />
               </div>
             </div>
           </TabsContent>
