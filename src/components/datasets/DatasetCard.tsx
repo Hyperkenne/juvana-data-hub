@@ -24,7 +24,7 @@ const DatasetCard = ({ dataset }: any) => {
     <Link to={`/datasets/${dataset.id}`}>
       <Card className="hover:shadow-lg hover:border-primary/50 transition-all duration-300 h-full">
         <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex items-start justify-between gap-2 mb-1">
             <CardTitle className="text-lg line-clamp-2">{dataset.name}</CardTitle>
             {dataset.category && (
               <Badge variant="secondary" className="shrink-0">
@@ -32,7 +32,14 @@ const DatasetCard = ({ dataset }: any) => {
               </Badge>
             )}
           </div>
-          
+
+          {/* ✅ Subtitle below dataset name */}
+          {dataset.subtitle && (
+            <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+              {dataset.subtitle}
+            </p>
+          )}
+
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Avatar className="h-5 w-5">
               <AvatarImage src={dataset.userAvatar} />
@@ -43,12 +50,6 @@ const DatasetCard = ({ dataset }: any) => {
         </CardHeader>
 
         <CardContent className="space-y-3">
-          {dataset.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {dataset.description}
-            </p>
-          )}
-
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
               <Download className="h-3 w-3" />
