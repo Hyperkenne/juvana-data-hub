@@ -1,10 +1,39 @@
 import { Download, Database, FileText, Eye, HardDrive } from "lucide-react";
+import { useEffect, useState } from "react";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 
 interface DatasetStatsProps {
   dataset: any;
 }
 
 const DatasetStats = ({ dataset }: DatasetStatsProps) => {
+  const [versionStats, setVersionStats] = useState({ fileCount: 0, totalSize: 0 });
+
+  useEffect(() => {
+    const loadVersionStats = async () => {
+      if (!dataset?.id) return;
+      try {
+        const q = query(
+          collection(db, `datasets/${dataset.id}/versions`),
+          orderBy("version", "desc"),
+          limit(1)
+        );
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          const data = snap.docs[0].data();
+          setVersionStats({
+            fileCount: data.files?.length || 0,
+            totalSize: data.totalSize || 0
+          });
+        }
+      } catch (error) {
+        console.error("Error loading version stats:", error);
+      }
+    };
+    loadVersionStats();
+  }, [dataset?.id]);
+
   const formatSize = (bytes: number) => {
     if (!bytes) return "—";
     const mb = bytes / (1024 * 1024);
@@ -14,11 +43,11 @@ const DatasetStats = ({ dataset }: DatasetStatsProps) => {
   };
 
   const stats = [
-    { icon: Download, label: "Downloads", value: dataset.downloadCount || 0 },
-    { icon: Eye, label: "Views", value: dataset.viewCount || 0 },
-    { icon: FileText, label: "Files", value: dataset.fileCount || 1 },
-    { icon: HardDrive, label: "Size", value: formatSize(dataset.totalSize) },
-    { icon: Database, label: "Version", value: dataset.latestVersion || 1 },
+    { icon: Download, label: "Downloads", value: dataset.downloadCount?.toLocaleString() || "0" },
+    { icon: Eye, label: "Views", value: dataset.viewCount?.toLocaleString() || "0" },
+    { icon: FileText, label: "Files", value: versionStats.fileCount || dataset.fileCount || "—" },
+    { icon: HardDrive, label: "Size", value: formatSize(versionStats.totalSize || dataset.totalSize) },
+    { icon: Database, label: "Version", value: `v${dataset.latestVersion || 1}` },
   ];
 
   return (
