@@ -7,7 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import DatasetStats from "@/components/datasets/DatasetStats";
 import DatasetFileExplorer from "@/components/datasets/DatasetFileExplorer";
 import DatasetVersionHistory from "@/components/datasets/DatasetVersionHistory";
@@ -16,7 +26,16 @@ import DatasetNotebook from "@/components/datasets/DatasetNotebook";
 import DatasetOverview from "@/components/datasets/DatasetOverview";
 import DatasetVersionUpdate from "@/components/datasets/DatasetVersionUpdate";
 import DatasetDataExplorer from "@/components/datasets/DatasetDataExplorer";
-import { Download, Trash2, Loader2, Database, Code, MessageSquare, History, Table } from "lucide-react";
+import {
+  Download,
+  Trash2,
+  Loader2,
+  Database,
+  Code,
+  MessageSquare,
+  History,
+  Table,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 
@@ -25,9 +44,14 @@ const DatasetDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // -------------------------
+  // ✅ ALL HOOKS AT THE TOP
+  // -------------------------
   const [dataset, setDataset] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [datasetFiles, setDatasetFiles] = useState<any[]>([]); // <-- FIXED HOOK ORDER
 
   useEffect(() => {
     load();
@@ -39,7 +63,11 @@ const DatasetDetail = () => {
       if (snap.exists()) {
         setDataset({ id: snap.id, ...snap.data() });
       } else {
-        toast({ title: "Not found", description: "Dataset not found", variant: "destructive" });
+        toast({
+          title: "Not found",
+          description: "Dataset not found",
+          variant: "destructive",
+        });
         navigate("/datasets");
       }
     } catch (error) {
@@ -51,7 +79,11 @@ const DatasetDetail = () => {
 
   const handleDelete = async () => {
     if (!user || user.uid !== dataset.userId) {
-      toast({ title: "Unauthorized", description: "You can only delete your own datasets", variant: "destructive" });
+      toast({
+        title: "Unauthorized",
+        description: "You can only delete your own datasets",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -62,7 +94,11 @@ const DatasetDetail = () => {
       navigate("/datasets");
     } catch (error: any) {
       console.error("Delete error:", error);
-      toast({ title: "Error", description: error.message || "Failed to delete dataset", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete dataset",
+        variant: "destructive",
+      });
       setDeleting(false);
     }
   };
@@ -73,6 +109,9 @@ const DatasetDetail = () => {
     return formatDistanceToNow(date, { addSuffix: true });
   };
 
+  // -------------------------
+  // Loading State
+  // -------------------------
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center">
@@ -84,11 +123,10 @@ const DatasetDetail = () => {
   if (!dataset) return null;
 
   const isOwner = user && user.uid === dataset.userId;
-  const [datasetFiles, setDatasetFiles] = useState<any[]>([]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
-      {/* Header Section - Kaggle Style */}
+      {/* Header Section */}
       <div className="border-b bg-card/50">
         <div className="container py-6 space-y-4">
           <div className="flex items-start justify-between gap-4">
@@ -100,29 +138,33 @@ const DatasetDetail = () => {
                 )}
                 <Badge variant="outline">v{dataset.latestVersion || 1}</Badge>
               </div>
-              
+
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Avatar className="h-6 w-6">
                     <AvatarImage src={dataset.userAvatar} />
-                    <AvatarFallback className="text-xs">{dataset.userName?.[0] || "U"}</AvatarFallback>
+                    <AvatarFallback className="text-xs">
+                      {dataset.userName?.[0] || "U"}
+                    </AvatarFallback>
                   </Avatar>
-                  <span className="font-medium">{dataset.userName || "Anonymous"}</span>
+                  <span className="font-medium">
+                    {dataset.userName || "Anonymous"}
+                  </span>
                 </div>
                 <span>•</span>
-                <span>Updated {formatDate(dataset.updatedAt || dataset.createdAt)}</span>
+                <span>
+                  Updated {formatDate(dataset.updatedAt || dataset.createdAt)}
+                </span>
                 <span>•</span>
                 <span>{dataset.downloadCount || 0} downloads</span>
               </div>
 
-              {/* Short description - max 2 lines */}
               {dataset.description && (
                 <p className="text-muted-foreground line-clamp-2 max-w-3xl">
                   {dataset.description}
                 </p>
               )}
 
-              {/* Tags */}
               {dataset.tags && dataset.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {dataset.tags.slice(0, 5).map((tag: string, idx: number) => (
@@ -148,24 +190,32 @@ const DatasetDetail = () => {
                   onUpdate={load}
                 />
               )}
-              
+
               {isOwner && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="outline" size="icon" disabled={deleting}>
-                      {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      {deleting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Delete Dataset?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will permanently delete this dataset and all its versions. This action cannot be undone.
+                        This will permanently delete this dataset and all its
+                        versions. This action cannot be undone.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      <AlertDialogAction
+                        onClick={handleDelete}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
                         Delete
                       </AlertDialogAction>
                     </AlertDialogFooter>
@@ -184,7 +234,7 @@ const DatasetDetail = () => {
         </div>
       </div>
 
-      {/* Main Content - Kaggle Style Tabs */}
+      {/* Main Content */}
       <div className="container py-6">
         <Tabs defaultValue="data" className="space-y-6">
           <TabsList className="bg-muted/50 p-1">
@@ -214,7 +264,10 @@ const DatasetDetail = () => {
           <TabsContent value="data" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2">
-                <DatasetFileExplorer datasetId={id!} onFilesLoaded={setDatasetFiles} />
+                <DatasetFileExplorer
+                  datasetId={id!}
+                  onFilesLoaded={setDatasetFiles}
+                />
               </div>
               <div>
                 <DatasetOverview dataset={dataset} />
@@ -222,26 +275,26 @@ const DatasetDetail = () => {
             </div>
           </TabsContent>
 
-          {/* Data Explorer Tab - Kaggle Style */}
+          {/* Explorer */}
           <TabsContent value="explorer" className="space-y-6">
             <DatasetDataExplorer files={datasetFiles} />
           </TabsContent>
 
-          {/* Code Tab - Kaggle Style Notebook */}
+          {/* Code Notebook */}
           <TabsContent value="code" className="space-y-6">
-            <DatasetNotebook 
-              datasetId={id!} 
+            <DatasetNotebook
+              datasetId={id!}
               datasetName={dataset.name}
               description={dataset.description}
             />
           </TabsContent>
 
-          {/* Discussion Tab */}
+          {/* Discussion */}
           <TabsContent value="discussion">
             <DatasetDiscussion datasetId={id!} />
           </TabsContent>
 
-          {/* Activity/Versions Tab */}
+          {/* Versions/Activity */}
           <TabsContent value="activity">
             <DatasetVersionHistory datasetId={id!} />
           </TabsContent>
