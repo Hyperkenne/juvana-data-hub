@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Users, Lock, Plus } from "lucide-react";
-import { collection, getDocs, query, where, addDoc, serverTimestamp } from "firebase/firestore";
+import { Calendar, Users, Lock, Plus, Key, Loader2, School, Building2 } from "lucide-react";
+import { collection, getDocs, query, where, addDoc, serverTimestamp, doc, updateDoc, arrayUnion, increment } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -36,11 +36,16 @@ const Playgrounds = () => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
+    rules: "",
     category: "",
     deadline: "",
     visibility: "community",
     prize: "",
+    organization: "",
+    organizationType: "university",
   });
+  const [joinCode, setJoinCode] = useState("");
+  const [isJoining, setIsJoining] = useState(false);
 
   useEffect(() => {
     fetchPlaygrounds();
@@ -73,11 +78,19 @@ const Playgrounds = () => {
     try {
       const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       await addDoc(collection(db, "playgrounds"), {
-        ...formData,
+        title: formData.title,
+        description: formData.description,
+        rules: formData.rules,
+        category: formData.category,
+        visibility: formData.visibility,
+        prize: formData.prize,
+        organization: formData.organization,
+        organizationType: formData.organizationType,
         deadline: new Date(formData.deadline),
         creatorId: user.uid,
         creatorName: user.displayName || "Anonymous",
-        participants: 0,
+        participants: 1,
+        members: [user.uid],
         inviteCode,
         createdAt: serverTimestamp(),
       });
@@ -87,15 +100,58 @@ const Playgrounds = () => {
       setFormData({
         title: "",
         description: "",
+        rules: "",
         category: "",
         deadline: "",
         visibility: "community",
         prize: "",
+        organization: "",
+        organizationType: "university",
       });
       fetchPlaygrounds();
     } catch (error) {
       console.error("Error creating playground:", error);
       toast.error("Failed to create playground");
+    }
+  };
+
+  const handleJoinWithCode = async () => {
+    if (!user || !joinCode.trim()) return;
+    
+    setIsJoining(true);
+    try {
+      const q = query(
+        collection(db, "playgrounds"),
+        where("inviteCode", "==", joinCode.toUpperCase().trim())
+      );
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.empty) {
+        toast.error("Invalid invite code");
+        return;
+      }
+
+      const playgroundDoc = snapshot.docs[0];
+      const playgroundData = playgroundDoc.data();
+      
+      if (playgroundData.members?.includes(user.uid)) {
+        toast.info("You're already a member of this playground");
+        return;
+      }
+
+      await updateDoc(doc(db, "playgrounds", playgroundDoc.id), {
+        members: arrayUnion(user.uid),
+        participants: increment(1),
+      });
+
+      toast.success(`Joined "${playgroundData.title}" successfully!`);
+      setJoinCode("");
+      fetchPlaygrounds();
+    } catch (error) {
+      console.error("Error joining playground:", error);
+      toast.error("Failed to join playground");
+    } finally {
+      setIsJoining(false);
     }
   };
 
@@ -159,9 +215,20 @@ const Playgrounds = () => {
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Describe the competition goals and rules..."
-                    rows={4}
+                    placeholder="Describe the competition goals..."
+                    rows={3}
                     required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="rules">Rules & Instructions</Label>
+                  <Textarea
+                    id="rules"
+                    value={formData.rules}
+                    onChange={(e) => setFormData({ ...formData, rules: e.target.value })}
+                    placeholder="Competition rules, submission guidelines, evaluation criteria..."
+                    rows={4}
                   />
                 </div>
 
@@ -217,6 +284,44 @@ const Playgrounds = () => {
                   </div>
                 </div>
 
+                {/* Organization Section for Private Playgrounds */}
+                {formData.visibility === "private" && (
+                  <div className="border rounded-lg p-4 bg-muted/30 space-y-4">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <School className="h-4 w-4" />
+                      Organization Details (for private groups)
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="organizationType">Organization Type</Label>
+                        <Select
+                          value={formData.organizationType}
+                          onValueChange={(value) => setFormData({ ...formData, organizationType: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="university">University</SelectItem>
+                            <SelectItem value="school">School</SelectItem>
+                            <SelectItem value="company">Company</SelectItem>
+                            <SelectItem value="group">Private Group</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="organization">Organization Name</Label>
+                        <Input
+                          id="organization"
+                          value={formData.organization}
+                          onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
+                          placeholder="e.g., University of Dar es Salaam"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
                     Cancel
@@ -228,6 +333,30 @@ const Playgrounds = () => {
           </Dialog>
         )}
       </div>
+
+      {/* Join with Code Section */}
+      {user && (
+        <Card className="mb-8 border-dashed">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Key className="h-5 w-5" />
+                <span>Have an invite code?</span>
+              </div>
+              <Input
+                placeholder="Enter invite code"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                className="max-w-[200px] uppercase"
+              />
+              <Button onClick={handleJoinWithCode} disabled={!joinCode.trim() || isJoining}>
+                {isJoining ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Join
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {playgrounds.length === 0 ? (
         <Card>

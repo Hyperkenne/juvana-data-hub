@@ -13,6 +13,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SubmissionUpload } from "@/components/SubmissionUpload";
 import { CompetitionDiscussions } from "@/components/CompetitionDiscussions";
 import { CompetitionTeams } from "@/components/CompetitionTeams";
+import { CompetitionOverview } from "@/components/competitions/CompetitionOverview";
+import { CompetitionData } from "@/components/competitions/CompetitionData";
 
 const CompetitionDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -126,8 +128,9 @@ const CompetitionDetail = () => {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="data">Data</TabsTrigger>
           <TabsTrigger value="leaderboard">
             <span className="flex items-center gap-2">
               Leaderboard
@@ -142,27 +145,11 @@ const CompetitionDetail = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Description</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground leading-relaxed">
-                {competition.description}
-              </p>
-            </CardContent>
-          </Card>
+          <CompetitionOverview competition={competition} />
+        </TabsContent>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Evaluation</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                Submissions are evaluated based on accuracy score. Higher scores rank higher on the leaderboard.
-              </p>
-            </CardContent>
-          </Card>
+        <TabsContent value="data">
+          <CompetitionData competitionId={id!} datasetId={competition.datasetId} />
         </TabsContent>
 
         <TabsContent value="leaderboard">
