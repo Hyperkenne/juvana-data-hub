@@ -98,8 +98,16 @@ const Dashboard = () => {
                   <CardTitle>{d.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <p className="text-sm text-muted-foreground">{d.description}</p>
-                  <p className="text-xs text-muted-foreground">Category: {d.category}</p>
+
+                  {/* ✅ SUBTITLE instead of description */}
+                  <p className="text-sm text-muted-foreground line-clamp-2">
+                    {d.subtitle || "No subtitle provided"}
+                  </p>
+
+                  <p className="text-xs text-muted-foreground">
+                    Category: {d.category}
+                  </p>
+
                   <div className="flex items-center gap-2">
                     <Avatar className="h-6 w-6">
                       <AvatarImage src={d.userAvatar} />
@@ -107,6 +115,7 @@ const Dashboard = () => {
                     </Avatar>
                     <p className="text-xs">{d.userName}</p>
                   </div>
+
                   <Link
                     to={`/datasets/${d.id}`}
                     className="text-blue-600 text-sm hover:underline"
@@ -119,6 +128,7 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+
 
       {/* Recent Activity */}
       <Card>
