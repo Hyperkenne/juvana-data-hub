@@ -53,21 +53,25 @@ const DatasetFileExplorer = ({ datasetId, onFilesLoaded }: DatasetFileExplorerPr
   const handleDownload = async (file: any) => {
     setDownloading(file.name);
     try {
+      // Get the actual download URL from Firebase Storage
+      const fileRef = ref(storage, file.url);
+      const downloadUrl = await getDownloadURL(fileRef);
+      
       // Fetch the file as blob to force download
-      const response = await fetch(file.url);
+      const response = await fetch(downloadUrl);
       if (!response.ok) throw new Error("Download failed");
       
       const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
+      const blobUrl = window.URL.createObjectURL(blob);
       
       // Create a download link
       const link = document.createElement("a");
-      link.href = downloadUrl;
+      link.href = blobUrl;
       link.download = file.name;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
+      window.URL.revokeObjectURL(blobUrl);
 
       // Increment download count
       await updateDoc(doc(db, "datasets", datasetId), {
@@ -77,9 +81,11 @@ const DatasetFileExplorer = ({ datasetId, onFilesLoaded }: DatasetFileExplorerPr
       toast({ title: "Download started", description: `Downloading ${file.name}` });
     } catch (error) {
       console.error("Download error:", error);
-      // Fallback: open in new tab
-      window.open(file.url, "_blank");
-      toast({ title: "Download", description: "Opening file in new tab" });
+      toast({ 
+        title: "Download failed", 
+        description: "Could not download file. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setDownloading(null);
     }
