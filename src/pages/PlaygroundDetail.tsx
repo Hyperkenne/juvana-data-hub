@@ -31,6 +31,16 @@ interface Playground {
   organization?: string;
   organizationType?: string;
   datasetId?: string;
+  // Dataset configuration
+  trainUrl?: string;
+  testUrl?: string;
+  groundTruthPath?: string;
+  trainRows?: number;
+  testRows?: number;
+  idColumn?: string;
+  targetColumn?: string;
+  scoringMethod?: string;
+  maxSubmissionsPerDay?: number;
 }
 
 interface LeaderboardEntry {
@@ -399,7 +409,19 @@ const PlaygroundDetail = () => {
                 </CardContent>
               </Card>
             ) : (
-              <SubmissionUpload competitionId={id!} onSubmissionComplete={() => {}} />
+              <SubmissionUpload 
+                competitionId={id!} 
+                competitionType="playground"
+                competition={{
+                  groundTruthPath: playground.groundTruthPath,
+                  testRows: playground.testRows,
+                  idColumn: playground.idColumn || "id",
+                  targetColumn: playground.targetColumn || "prediction",
+                  scoringMethod: playground.scoringMethod || "accuracy",
+                  maxSubmissionsPerDay: playground.maxSubmissionsPerDay || 5,
+                }}
+                onSubmissionComplete={() => {}} 
+              />
             )}
           </TabsContent>
         </Tabs>

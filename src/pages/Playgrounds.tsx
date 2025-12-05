@@ -8,11 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Users, Lock, Plus, Key, Loader2, School, Building2 } from "lucide-react";
+import { Calendar, Users, Lock, Plus, Key, Loader2, School, Building2, Database, CheckCircle } from "lucide-react";
 import { collection, getDocs, query, where, addDoc, serverTimestamp, doc, updateDoc, arrayUnion, increment } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { CompetitionDatasetUpload } from "@/components/competitions/CompetitionDatasetUpload";
 
 interface Playground {
   id: string;
@@ -26,6 +27,16 @@ interface Playground {
   visibility: "private" | "community";
   inviteCode?: string;
   prize?: string;
+}
+
+interface DatasetInfo {
+  trainUrl: string;
+  testUrl: string;
+  groundTruthPath: string;
+  trainRows: number;
+  testRows: number;
+  idColumn: string;
+  targetColumn: string;
 }
 
 const Playgrounds = () => {
@@ -43,9 +54,13 @@ const Playgrounds = () => {
     prize: "",
     organization: "",
     organizationType: "university",
+    scoringMethod: "accuracy",
+    maxSubmissionsPerDay: "5",
   });
+  const [datasetInfo, setDatasetInfo] = useState<DatasetInfo | null>(null);
   const [joinCode, setJoinCode] = useState("");
   const [isJoining, setIsJoining] = useState(false);
+  const [creationStep, setCreationStep] = useState<1 | 2>(1);
 
   useEffect(() => {
     fetchPlaygrounds();
@@ -75,6 +90,11 @@ const Playgrounds = () => {
       return;
     }
 
+    if (!datasetInfo) {
+      toast.error("Please upload competition dataset first");
+      return;
+    }
+
     try {
       const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       await addDoc(collection(db, "playgrounds"), {
@@ -93,6 +113,16 @@ const Playgrounds = () => {
         members: [user.uid],
         inviteCode,
         createdAt: serverTimestamp(),
+        // Dataset configuration
+        trainUrl: datasetInfo.trainUrl,
+        testUrl: datasetInfo.testUrl,
+        groundTruthPath: datasetInfo.groundTruthPath,
+        trainRows: datasetInfo.trainRows,
+        testRows: datasetInfo.testRows,
+        idColumn: datasetInfo.idColumn,
+        targetColumn: datasetInfo.targetColumn,
+        scoringMethod: formData.scoringMethod,
+        maxSubmissionsPerDay: parseInt(formData.maxSubmissionsPerDay) || 5,
       });
       
       toast.success(`Playground created! Invite code: ${inviteCode}`);
@@ -107,7 +137,11 @@ const Playgrounds = () => {
         prize: "",
         organization: "",
         organizationType: "university",
+        scoringMethod: "accuracy",
+        maxSubmissionsPerDay: "5",
       });
+      setDatasetInfo(null);
+      setCreationStep(1);
       fetchPlaygrounds();
     } catch (error) {
       console.error("Error creating playground:", error);
@@ -190,145 +224,243 @@ const Playgrounds = () => {
                 Create Playground
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Playground</DialogTitle>
                 <DialogDescription>
-                  Set up a private competition for your class or community
+                  Step {creationStep} of 2: {creationStep === 1 ? "Competition Details" : "Upload Dataset"}
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleCreatePlayground} className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Competition Title</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="e.g., CS101 Final Project Challenge"
-                    required
-                  />
+              
+              {/* Step Indicators */}
+              <div className="flex items-center gap-4 mb-4">
+                <div className={`flex items-center gap-2 ${creationStep >= 1 ? "text-primary" : "text-muted-foreground"}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${creationStep >= 1 ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                    {creationStep > 1 ? <CheckCircle className="h-4 w-4" /> : "1"}
+                  </div>
+                  <span className="text-sm">Details</span>
                 </div>
-
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Describe the competition goals..."
-                    rows={3}
-                    required
-                  />
+                <div className="flex-1 h-px bg-border" />
+                <div className={`flex items-center gap-2 ${creationStep >= 2 ? "text-primary" : "text-muted-foreground"}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${creationStep >= 2 ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                    {datasetInfo ? <CheckCircle className="h-4 w-4" /> : "2"}
+                  </div>
+                  <span className="text-sm">Dataset</span>
                 </div>
+              </div>
 
-                <div>
-                  <Label htmlFor="rules">Rules & Instructions</Label>
-                  <Textarea
-                    id="rules"
-                    value={formData.rules}
-                    onChange={(e) => setFormData({ ...formData, rules: e.target.value })}
-                    placeholder="Competition rules, submission guidelines, evaluation criteria..."
-                    rows={4}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
+              {creationStep === 1 ? (
+                <div className="space-y-4">
                   <div>
-                    <Label htmlFor="category">Category</Label>
+                    <Label htmlFor="title">Competition Title</Label>
                     <Input
-                      id="category"
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      placeholder="e.g., Machine Learning"
+                      id="title"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      placeholder="e.g., CS101 Final Project Challenge"
                       required
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="deadline">Deadline</Label>
-                    <Input
-                      id="deadline"
-                      type="datetime-local"
-                      value={formData.deadline}
-                      onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Describe the competition goals..."
+                      rows={3}
                       required
                     />
                   </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="visibility">Visibility</Label>
-                    <Select
-                      value={formData.visibility}
-                      onValueChange={(value) => setFormData({ ...formData, visibility: value })}
+                    <Label htmlFor="rules">Rules & Instructions</Label>
+                    <Textarea
+                      id="rules"
+                      value={formData.rules}
+                      onChange={(e) => setFormData({ ...formData, rules: e.target.value })}
+                      placeholder="Competition rules, submission guidelines, evaluation criteria..."
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="category">Category</Label>
+                      <Input
+                        id="category"
+                        value={formData.category}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        placeholder="e.g., Machine Learning"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="deadline">Deadline</Label>
+                      <Input
+                        id="deadline"
+                        type="datetime-local"
+                        value={formData.deadline}
+                        onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="visibility">Visibility</Label>
+                      <Select
+                        value={formData.visibility}
+                        onValueChange={(value) => setFormData({ ...formData, visibility: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="private">Private (Invite Only)</SelectItem>
+                          <SelectItem value="community">Community (Public)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="prize">Prize (Optional)</Label>
+                      <Input
+                        id="prize"
+                        value={formData.prize}
+                        onChange={(e) => setFormData({ ...formData, prize: e.target.value })}
+                        placeholder="e.g., Certificate, Bonus Points"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="scoringMethod">Scoring Method</Label>
+                      <Select
+                        value={formData.scoringMethod}
+                        onValueChange={(value) => setFormData({ ...formData, scoringMethod: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="accuracy">Accuracy (Classification)</SelectItem>
+                          <SelectItem value="f1">F1 Score (Binary Classification)</SelectItem>
+                          <SelectItem value="rmse">RMSE (Regression)</SelectItem>
+                          <SelectItem value="mae">MAE (Regression)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="maxSubmissions">Max Daily Submissions</Label>
+                      <Input
+                        id="maxSubmissions"
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={formData.maxSubmissionsPerDay}
+                        onChange={(e) => setFormData({ ...formData, maxSubmissionsPerDay: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Organization Section for Private Playgrounds */}
+                  {formData.visibility === "private" && (
+                    <div className="border rounded-lg p-4 bg-muted/30 space-y-4">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <School className="h-4 w-4" />
+                        Organization Details (for private groups)
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="organizationType">Organization Type</Label>
+                          <Select
+                            value={formData.organizationType}
+                            onValueChange={(value) => setFormData({ ...formData, organizationType: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="university">University</SelectItem>
+                              <SelectItem value="school">School</SelectItem>
+                              <SelectItem value="company">Company</SelectItem>
+                              <SelectItem value="group">Private Group</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="organization">Organization Name</Label>
+                          <Input
+                            id="organization"
+                            value={formData.organization}
+                            onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
+                            placeholder="e.g., University of Dar es Salaam"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="button" 
+                      onClick={() => {
+                        if (!formData.title || !formData.description || !formData.category || !formData.deadline) {
+                          toast.error("Please fill in all required fields");
+                          return;
+                        }
+                        setCreationStep(2);
+                      }}
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="private">Private (Invite Only)</SelectItem>
-                        <SelectItem value="community">Community (Public)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      Next: Upload Dataset
+                    </Button>
                   </div>
-
-                  <div>
-                    <Label htmlFor="prize">Prize (Optional)</Label>
-                    <Input
-                      id="prize"
-                      value={formData.prize}
-                      onChange={(e) => setFormData({ ...formData, prize: e.target.value })}
-                      placeholder="e.g., Certificate, Bonus Points"
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {datasetInfo ? (
+                    <div className="border rounded-lg p-4 bg-green-500/10 border-green-500/50">
+                      <div className="flex items-center gap-2 text-green-600 mb-2">
+                        <CheckCircle className="h-5 w-5" />
+                        <span className="font-semibold">Dataset Uploaded Successfully</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+                        <span>Train rows: {datasetInfo.trainRows}</span>
+                        <span>Test rows: {datasetInfo.testRows}</span>
+                        <span>ID column: {datasetInfo.idColumn}</span>
+                        <span>Target column: {datasetInfo.targetColumn}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <CompetitionDatasetUpload
+                      competitionType="playground"
+                      onUploadComplete={(data) => setDatasetInfo(data)}
                     />
+                  )}
+
+                  <div className="flex justify-between gap-2 pt-4">
+                    <Button type="button" variant="outline" onClick={() => setCreationStep(1)}>
+                      Back
+                    </Button>
+                    <Button 
+                      onClick={handleCreatePlayground}
+                      disabled={!datasetInfo}
+                    >
+                      <Database className="h-4 w-4 mr-2" />
+                      Create Playground
+                    </Button>
                   </div>
                 </div>
-
-                {/* Organization Section for Private Playgrounds */}
-                {formData.visibility === "private" && (
-                  <div className="border rounded-lg p-4 bg-muted/30 space-y-4">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <School className="h-4 w-4" />
-                      Organization Details (for private groups)
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="organizationType">Organization Type</Label>
-                        <Select
-                          value={formData.organizationType}
-                          onValueChange={(value) => setFormData({ ...formData, organizationType: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="university">University</SelectItem>
-                            <SelectItem value="school">School</SelectItem>
-                            <SelectItem value="company">Company</SelectItem>
-                            <SelectItem value="group">Private Group</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="organization">Organization Name</Label>
-                        <Input
-                          id="organization"
-                          value={formData.organization}
-                          onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
-                          placeholder="e.g., University of Dar es Salaam"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit">Create Playground</Button>
-                </div>
-              </form>
+              )}
             </DialogContent>
           </Dialog>
         )}
