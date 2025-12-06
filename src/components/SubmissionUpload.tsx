@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Upload, FileCheck, AlertCircle, Loader2, Trophy, Clock, FileText } from "lucide-react";
-import { parseCSV, scoreSubmission, validateSubmission } from "@/lib/scoring";
-import { ref, uploadBytes, getDownloadURL, getBytes } from "firebase/storage";
+import { parseCSV, validateSubmission } from "@/lib/scoring";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { collection, addDoc, serverTimestamp, doc, setDoc, getDoc, query, where, getDocs, orderBy } from "firebase/firestore";
-import { storage, db } from "@/lib/firebase";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { storage, db, app } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "./ui/alert";
@@ -143,85 +144,84 @@ export const SubmissionUpload = ({
       const snapshot = await uploadBytes(storageRef, file);
       const fileUrl = await getDownloadURL(snapshot.ref);
 
-      // Calculate score using ground truth
-      let score = 0;
-      let scoringError: string | null = null;
-      const metric = competition?.scoringMethod || competition?.evaluationMetric || "accuracy";
-
-      if (competition?.groundTruthPath && parsedData) {
-        try {
-          const truthRef = ref(storage, competition.groundTruthPath);
-          const truthBytes = await getBytes(truthRef);
-          const truthText = new TextDecoder().decode(truthBytes);
-          const groundTruth = parseCSV(truthText);
-          
-          const result = scoreSubmission(
-            parsedData, 
-            groundTruth, 
-            metric,
-            idColumn,
-            targetColumn
-          );
-          
-          if (result.valid) {
-            score = result.score;
-          } else {
-            scoringError = result.error || "Scoring failed";
-          }
-        } catch (error) {
-          console.error("Error loading ground truth:", error);
-          scoringError = "Could not access ground truth file";
-        }
-      } else {
-        scoringError = "No ground truth configured for this competition";
-      }
-
-      // Create submission record
+      // Create submission record with pending status
       const submissionData: any = {
         userId: user.uid,
         userName: user.displayName || "Anonymous",
         userAvatar: user.photoURL || null,
-        score: score,
+        score: 0,
         fileUrl: fileUrl,
+        filePath: storagePath,
         fileName: file.name,
         rowCount: parsedData?.rowCount || 0,
         submittedAt: serverTimestamp(),
-        status: scoringError ? "error" : "scored",
-        errorMessage: scoringError || null,
+        status: "pending",
       };
 
-      await addDoc(collection(db, getCollectionPath("submissions")), submissionData);
+      const submissionRef = await addDoc(collection(db, getCollectionPath("submissions")), submissionData);
 
-      // Update leaderboard only if scoring was successful
-      if (!scoringError) {
-        const leaderboardRef = doc(db, getCollectionPath("leaderboard"), user.uid);
-        const existingEntry = await getDoc(leaderboardRef);
+      // Call Cloud Function for server-side scoring
+      const groundTruthPath = competition?.groundTruthPath;
+      
+      if (groundTruthPath) {
+        toast.info("Scoring your submission...");
         
-        const currentSubmissions = existingEntry.exists() ? (existingEntry.data().submissions || 0) : 0;
-        const currentBestScore = existingEntry.exists() ? (existingEntry.data().score || 0) : 0;
-        
-        const shouldUpdateBest = score > currentBestScore;
-        
-        await setDoc(leaderboardRef, {
-          userId: user.uid,
-          userName: user.displayName || "Anonymous",
-          userAvatar: user.photoURL || null,
-          score: shouldUpdateBest ? score : currentBestScore,
-          bestScore: shouldUpdateBest ? score : currentBestScore,
-          submissions: currentSubmissions + 1,
-          lastSubmission: serverTimestamp(),
-        }, { merge: true });
+        try {
+          const functions = getFunctions(app);
+          const scoreSubmissionFn = httpsCallable(functions, "scoreSubmissionFunction");
+          
+          const result = await scoreSubmissionFn({
+            submissionPath: storagePath,
+            competitionId,
+            competitionType,
+            groundTruthPath,
+            scoringMethod: competition?.scoringMethod || competition?.evaluationMetric || "accuracy",
+            idColumn,
+            targetColumn,
+            userId: user.uid,
+            userName: user.displayName || "Anonymous",
+            userAvatar: user.photoURL || null,
+          });
 
-        const improved = userBestScore !== null && score > userBestScore;
-        toast.success(
-          improved 
-            ? `New best score! ${score.toFixed(4)} (↑${(score - userBestScore).toFixed(4)})`
-            : `Submission scored: ${score.toFixed(4)}`
-        );
-        
-        setUserBestScore(prev => Math.max(prev || 0, score));
+          const data = result.data as any;
+          
+          if (data.valid) {
+            // Update submission with score
+            await setDoc(doc(db, getCollectionPath("submissions"), submissionRef.id), {
+              score: data.score,
+              status: "scored",
+              scoredAt: serverTimestamp(),
+            }, { merge: true });
+
+            const improved = userBestScore !== null && data.score > userBestScore;
+            toast.success(
+              improved 
+                ? `New best score! ${data.score.toFixed(4)} (↑${(data.score - userBestScore).toFixed(4)})`
+                : `Submission scored: ${data.score.toFixed(4)}`
+            );
+            
+            setUserBestScore(prev => Math.max(prev || 0, data.score));
+          } else {
+            await setDoc(doc(db, getCollectionPath("submissions"), submissionRef.id), {
+              status: "error",
+              errorMessage: data.error || "Scoring failed",
+            }, { merge: true });
+            
+            toast.warning(`Scoring failed: ${data.error}`);
+          }
+        } catch (fnError: any) {
+          console.error("Cloud function error:", fnError);
+          
+          // Update submission status
+          await setDoc(doc(db, getCollectionPath("submissions"), submissionRef.id), {
+            status: "error",
+            errorMessage: fnError.message || "Server scoring failed",
+          }, { merge: true });
+          
+          toast.warning("Submission saved but server scoring failed. It will be processed later.");
+        }
       } else {
-        toast.warning(`Submission saved but scoring failed: ${scoringError}`);
+        toast.warning("No ground truth configured. Submission saved without scoring.");
       }
       
       setFile(null);
@@ -290,7 +290,7 @@ export const SubmissionUpload = ({
         <CardHeader>
           <CardTitle>Submit Your Prediction</CardTitle>
           <CardDescription>
-            Upload a CSV file with your predictions
+            Upload a CSV file with your predictions. Scoring is handled securely on the server.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

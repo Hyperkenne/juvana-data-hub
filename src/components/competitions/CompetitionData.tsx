@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Database, Download, FileText, ExternalLink, Loader2 } from "lucide-react";
+import { Database, Download, FileText, ExternalLink, Loader2, Info } from "lucide-react";
 import { Link } from "react-router-dom";
 import { doc, getDoc, collection, getDocs, query, orderBy, limit, updateDoc, increment } from "firebase/firestore";
 import { ref, getDownloadURL } from "firebase/storage";
@@ -12,20 +12,64 @@ import { useToast } from "@/hooks/use-toast";
 interface CompetitionDataProps {
   competitionId: string;
   datasetId?: string;
+  // Direct file URLs for competitions/playgrounds
+  trainUrl?: string;
+  testUrl?: string;
 }
 
-export const CompetitionData = ({ competitionId, datasetId }: CompetitionDataProps) => {
+interface DataFile {
+  name: string;
+  url: string;
+  size?: number;
+  type: "train" | "test";
+}
+
+export const CompetitionData = ({ 
+  competitionId, 
+  datasetId,
+  trainUrl,
+  testUrl 
+}: CompetitionDataProps) => {
   const [dataset, setDataset] = useState<any>(null);
   const [files, setFiles] = useState<any[]>([]);
+  const [directFiles, setDirectFiles] = useState<DataFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     loadData();
-  }, [datasetId]);
+  }, [datasetId, trainUrl, testUrl]);
 
   const loadData = async () => {
+    setLoading(true);
+    
+    // Check for direct file URLs first (from playground/competition uploads)
+    if (trainUrl || testUrl) {
+      const directFilesList: DataFile[] = [];
+      
+      if (trainUrl) {
+        directFilesList.push({
+          name: "train.csv",
+          url: trainUrl,
+          type: "train"
+        });
+      }
+      
+      if (testUrl) {
+        directFilesList.push({
+          name: "test.csv", 
+          url: testUrl,
+          type: "test"
+        });
+      }
+      
+      setDirectFiles(directFilesList);
+      setLoading(false);
+      return;
+    }
+
+    // Fall back to linked dataset approach
     if (!datasetId) {
       setLoading(false);
       return;
@@ -55,7 +99,34 @@ export const CompetitionData = ({ competitionId, datasetId }: CompetitionDataPro
     }
   };
 
-  const handleDownload = async (file: any) => {
+  const handleDirectDownload = async (file: DataFile) => {
+    setDownloading(file.name);
+    try {
+      // File URL is already a public download URL
+      const response = await fetch(file.url);
+      if (!response.ok) throw new Error("Download failed");
+      
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+
+      toast({ title: "Download started", description: `Downloading ${file.name}` });
+    } catch (error) {
+      console.error("Download error:", error);
+      toast({ title: "Download failed", variant: "destructive" });
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const handleDatasetDownload = async (file: any) => {
     setDownloading(file.name);
     try {
       const fileRef = ref(storage, file.url);
@@ -101,12 +172,95 @@ export const CompetitionData = ({ competitionId, datasetId }: CompetitionDataPro
     return (
       <Card>
         <CardContent className="py-12 text-center text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
           Loading data...
         </CardContent>
       </Card>
     );
   }
 
+  // Show direct files if available (from competition/playground uploads)
+  if (directFiles.length > 0) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Competition Data Files
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {directFiles.map((file) => (
+                <div
+                  key={file.name}
+                  className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <FileText className="h-5 w-5 text-primary shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium">{file.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {file.type === "train" ? "Training data with labels" : "Test data for predictions"}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => handleDirectDownload(file)}
+                    disabled={downloading === file.name}
+                  >
+                    {downloading === file.name ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </>
+                    )}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Data Usage Instructions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Info className="h-5 w-5" />
+              How to Use the Data
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <h4 className="font-semibold">Training Data (train.csv)</h4>
+              <p className="text-sm text-muted-foreground">
+                Contains input features and the target label. Use this to train your machine learning model.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-semibold">Test Data (test.csv)</h4>
+              <p className="text-sm text-muted-foreground">
+                Contains input features only (no labels). Generate predictions for this dataset and submit them.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-semibold">Submission Format</h4>
+              <p className="text-sm text-muted-foreground">
+                Your submission should be a CSV with two columns: the ID column and your prediction column.
+                Make sure the row count matches the test data.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Fall back to linked dataset display
   if (!datasetId || !dataset) {
     return (
       <Card>
@@ -172,7 +326,7 @@ export const CompetitionData = ({ competitionId, datasetId }: CompetitionDataPro
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => handleDownload(file)}
+                  onClick={() => handleDatasetDownload(file)}
                   disabled={downloading === file.name}
                 >
                   {downloading === file.name ? (
