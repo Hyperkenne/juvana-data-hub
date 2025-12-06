@@ -329,7 +329,12 @@ const PlaygroundDetail = () => {
           </TabsContent>
 
           <TabsContent value="data">
-            <CompetitionData competitionId={id!} datasetId={playground.datasetId} />
+            <CompetitionData 
+              competitionId={id!} 
+              datasetId={playground.datasetId}
+              trainUrl={playground.trainUrl}
+              testUrl={playground.testUrl}
+            />
           </TabsContent>
 
           <TabsContent value="leaderboard">

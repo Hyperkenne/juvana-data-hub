@@ -149,7 +149,12 @@ const CompetitionDetail = () => {
         </TabsContent>
 
         <TabsContent value="data">
-          <CompetitionData competitionId={id!} datasetId={competition.datasetId} />
+          <CompetitionData 
+            competitionId={id!} 
+            datasetId={competition.datasetId}
+            trainUrl={competition.trainUrl}
+            testUrl={competition.testUrl}
+          />
         </TabsContent>
 
         <TabsContent value="leaderboard">

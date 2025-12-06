@@ -20,6 +20,14 @@ export interface Competition {
   evaluationMetric?: "accuracy" | "rmse" | "mae" | "f1" | "auc";
   groundTruthPath?: string;
   datasetId?: string;
+  // Direct file URLs
+  trainUrl?: string;
+  testUrl?: string;
+  testRows?: number;
+  idColumn?: string;
+  targetColumn?: string;
+  scoringMethod?: string;
+  maxSubmissionsPerDay?: number;
 }
 
 export interface Submission {
