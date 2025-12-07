@@ -155,7 +155,7 @@ export const CompetitionDatasetUpload = ({
     try {
       const tempId = competitionId || `temp_${Date.now()}`;
       const basePath = competitionType === "playground" 
-        ? `playground/${tempId}` 
+        ? `playgrounds/${tempId}` 
         : `competitions/${tempId}`;
 
       // Upload all three files in parallel
